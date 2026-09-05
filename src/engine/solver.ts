@@ -95,7 +95,8 @@ export function isPuzzleUnique(puzzle: Puzzle): boolean {
 export function findConflicts(
   cells: BoardCell[],
   size: number,
-  regions: number[][]
+  regions: number[][],
+  solution?: Coordinate[]
 ): Set<string> {
   const conflicts = new Set<string>();
   const catPositions: Coordinate[] = [];
@@ -106,6 +107,7 @@ export function findConflicts(
     }
   }
 
+  // Check pairwise conflicts between placed cats
   for (let i = 0; i < catPositions.length; i++) {
     for (let j = i + 1; j < catPositions.length; j++) {
       const a = catPositions[i];
@@ -119,6 +121,16 @@ export function findConflicts(
       if (sameRow || sameCol || sameRegion || touching) {
         conflicts.add(`${a.row},${a.col}`);
         conflicts.add(`${b.row},${b.col}`);
+      }
+    }
+  }
+
+  // If known solution is provided, flag any placed cat that is not part of the unique solution
+  if (solution && solution.length > 0) {
+    const solSet = new Set(solution.map((s) => `${s.row},${s.col}`));
+    for (const cat of catPositions) {
+      if (!solSet.has(`${cat.row},${cat.col}`)) {
+        conflicts.add(`${cat.row},${cat.col}`);
       }
     }
   }
@@ -204,9 +216,11 @@ export function getSatisfiedUnits(
 
 /**
  * Smart logical hint deduction engine:
- * 1. Checks if any row/col/region has only 1 remaining valid spot -> MUST be a Cat!
- * 2. Checks if placing a cat at (r, c) would invalidate another unit -> MUST be an 'X'!
- * 3. Fallback: compares against unique solution and suggests next progressive step.
+ * 1. Checks if existing placed cats contradict the solution -> prompts to remove them!
+ * 2. Checks if the player mistakenly marked a cat spot with 'X' -> prompts to unmark!
+ * 3. Checks if any row/col/region has only 1 remaining valid spot -> MUST be a Cat!
+ * 4. Checks if an empty cell cannot be a cat -> MUST be an 'X'!
+ * 5. Suggests the next cat placement without contradicting placed cats.
  */
 export function generateHint(
   puzzle: Puzzle,
@@ -220,58 +234,85 @@ export function generateHint(
   const solution = solutions[0];
   const solutionSet = new Set(solution.map((s) => `${s.row},${s.col}`));
 
-  // Check row deductions
+  // 1. FIRST: Check if the player has placed any INCORRECT cats!
+  // If a cat is placed that is NOT in the solution, we MUST tell the player to remove it first,
+  // otherwise any further hint would contradict their placed cat!
+  for (const cell of cells) {
+    if (cell.state === 'cat' && !solutionSet.has(`${cell.row},${cell.col}`)) {
+      return {
+        type: 'elimination',
+        row: cell.row,
+        col: cell.col,
+        explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! Remove it to clear the contradiction. 😿`,
+      };
+    }
+  }
+
+  // 2. SECOND: Check if the player accidentally marked a TRUE CAT spot with an 'X'!
+  for (const sol of solution) {
+    const cell = cells.find((c) => c.row === sol.row && c.col === sol.col);
+    if (cell && cell.state === 'mark') {
+      return {
+        type: 'placement',
+        row: sol.row,
+        col: sol.col,
+        explanation: `The ❌ in Row ${sol.row + 1}, Column ${sol.col + 1} was placed by mistake! A happy cat belongs here. 🐱`,
+      };
+    }
+  }
+
+  // 3. THIRD: Check for forced moves in rows (where row has no cat yet)
   for (let r = 0; r < size; r++) {
     const rowCells = cells.filter((c) => c.row === r);
     const hasCat = rowCells.some((c) => c.state === 'cat');
     if (!hasCat) {
       const candidates = rowCells.filter((c) => c.state === 'empty');
-      if (candidates.length === 1) {
+      if (candidates.length === 1 && solutionSet.has(`${candidates[0].row},${candidates[0].col}`)) {
         return {
           type: 'placement',
           row: candidates[0].row,
           col: candidates[0].col,
-          explanation: `In row ${r + 1}, there is only one open spot left for a cat!`,
+          explanation: `In Row ${r + 1}, only this square remains open for a cat!`,
         };
       }
     }
   }
 
-  // Check col deductions
+  // 4. FOURTH: Check for forced moves in columns
   for (let c = 0; c < size; c++) {
     const colCells = cells.filter((item) => item.col === c);
     const hasCat = colCells.some((item) => item.state === 'cat');
     if (!hasCat) {
       const candidates = colCells.filter((item) => item.state === 'empty');
-      if (candidates.length === 1) {
+      if (candidates.length === 1 && solutionSet.has(`${candidates[0].row},${candidates[0].col}`)) {
         return {
           type: 'placement',
           row: candidates[0].row,
           col: candidates[0].col,
-          explanation: `In column ${c + 1}, only this square remains open!`,
+          explanation: `In Column ${c + 1}, only this square remains open for a cat!`,
         };
       }
     }
   }
 
-  // Check region deductions
+  // 5. FIFTH: Check for forced moves in regions
   for (let reg = 0; reg < size; reg++) {
     const regCells = cells.filter((item) => regions[item.row][item.col] === reg);
     const hasCat = regCells.some((item) => item.state === 'cat');
     if (!hasCat) {
       const candidates = regCells.filter((item) => item.state === 'empty');
-      if (candidates.length === 1) {
+      if (candidates.length === 1 && solutionSet.has(`${candidates[0].row},${candidates[0].col}`)) {
         return {
           type: 'placement',
           row: candidates[0].row,
           col: candidates[0].col,
-          explanation: `This colored territory has only one spot left where a cat can fit!`,
+          explanation: `In this colored territory, only this square remains open for a cat!`,
         };
       }
     }
   }
 
-  // Check if an empty cell is not in the solution -> can be safely eliminated with an 'X'
+  // 6. SIXTH: Deduce cells that cannot be cats (must be 'X')
   for (const cell of cells) {
     if (cell.state === 'empty' && !solutionSet.has(`${cell.row},${cell.col}`)) {
       return {
@@ -283,18 +324,114 @@ export function generateHint(
     }
   }
 
-  // Find an unplaced cat from solution
+  // 7. SEVENTH: Place an unplaced cat from solution (only if row/col/region doesn't already have a cat!)
   for (const sol of solution) {
     const cell = cells.find((c) => c.row === sol.row && c.col === sol.col);
-    if (cell && cell.state !== 'cat') {
-      return {
-        type: 'placement',
-        row: sol.row,
-        col: sol.col,
-        explanation: `A happy cat belongs right here! 🐱`,
-      };
+    if (cell && cell.state === 'empty') {
+      const rowHasCat = cells.some((c) => c.row === sol.row && c.state === 'cat');
+      const colHasCat = cells.some((c) => c.col === sol.col && c.state === 'cat');
+      const regHasCat = cells.some((c) => regions[c.row][c.col] === regions[sol.row][sol.col] && c.state === 'cat');
+      if (!rowHasCat && !colHasCat && !regHasCat) {
+        return {
+          type: 'placement',
+          row: sol.row,
+          col: sol.col,
+          explanation: `A happy cat belongs right here in Row ${sol.row + 1}, Column ${sol.col + 1}! 🐱`,
+        };
+      }
     }
   }
 
   return null;
 }
+
+/**
+ * Validates the complete mathematical integrity of a puzzle:
+ * 1. Has correct dimensions and region identifiers 0..(size - 1)
+ * 2. Every region is orthogonally contiguous (connected)
+ * 3. Exactly ONE unique solution exists (no contradictory solutions)
+ * 4. Solution satisfies all row, col, region, and 8-neighbour isolation constraints
+ */
+export function validatePuzzleIntegrity(puzzle: Puzzle): { valid: boolean; error?: string } {
+  const size = puzzle.size;
+  const regions = puzzle.regions;
+
+  if (size < 4) {
+    return { valid: false, error: `Invalid board size ${size}, minimum is 4` };
+  }
+
+  if (!regions || regions.length !== size) {
+    return { valid: false, error: `Region grid height (${regions?.length}) does not match size (${size})` };
+  }
+
+  for (let r = 0; r < size; r++) {
+    if (!regions[r] || regions[r].length !== size) {
+      return { valid: false, error: `Region row ${r} length does not match size (${size})` };
+    }
+  }
+
+  // Check that all regions 0..(size - 1) exist and are connected
+  const regionCells: Coordinate[][] = Array.from({ length: size }, () => []);
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const reg = regions[r][c];
+      if (reg < 0 || reg >= size) {
+        return { valid: false, error: `Cell (${r}, ${c}) has invalid region index ${reg}` };
+      }
+      regionCells[reg].push({ row: r, col: c });
+    }
+  }
+
+  for (let reg = 0; reg < size; reg++) {
+    const cells = regionCells[reg];
+    if (cells.length === 0) {
+      return { valid: false, error: `Region ${reg} has no cells` };
+    }
+
+    // BFS connectedness check
+    const visited = new Set<string>();
+    const queue = [cells[0]];
+    visited.add(`${cells[0].row},${cells[0].col}`);
+
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      for (const d of [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }]) {
+        const nr = curr.row + d.dr;
+        const nc = curr.col + d.dc;
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size && regions[nr][nc] === reg) {
+          const key = `${nr},${nc}`;
+          if (!visited.has(key)) {
+            visited.add(key);
+            queue.push({ row: nr, col: nc });
+          }
+        }
+      }
+    }
+
+    if (visited.size !== cells.length) {
+      return { valid: false, error: `Region ${reg} is disconnected` };
+    }
+  }
+
+  // Solve and ensure EXACTLY 1 unique solution (no alternative or contradictory solutions)
+  const solutions = solvePuzzle(puzzle, 3);
+  if (solutions.length === 0) {
+    return { valid: false, error: `Puzzle has 0 solutions (unsolvable)` };
+  }
+  if (solutions.length > 1) {
+    return { valid: false, error: `Puzzle has ${solutions.length} solutions (contradictory / non-unique)` };
+  }
+
+  const sol = solutions[0];
+  if (puzzle.solution) {
+    const solSet = new Set(sol.map((s) => `${s.row},${s.col}`));
+    for (const s of puzzle.solution) {
+      if (!solSet.has(`${s.row},${s.col}`)) {
+        return { valid: false, error: `Known solution does not match solver output` };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+

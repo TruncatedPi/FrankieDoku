@@ -218,10 +218,10 @@ export const Board: React.FC<BoardProps> = ({
                 </div>
               )}
 
-              {/* 'X' Elimination Mark */}
+              {/* 'X' Elimination Mark - 90% of square cell size and darker for contrast */}
               {cell.state === 'mark' && (
-                <div className="w-[60%] h-[60%] flex items-center justify-center animate-bounce-small text-slate-700/70 dark:text-slate-200/80">
-                  <X className="w-full h-full stroke-[2.5]" />
+                <div className="w-[90%] h-[90%] flex items-center justify-center animate-bounce-small text-slate-900 dark:text-slate-100">
+                  <X className="w-full h-full stroke-[3.5]" />
                 </div>
               )}
 
