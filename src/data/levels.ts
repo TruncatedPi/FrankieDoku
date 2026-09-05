@@ -23,18 +23,18 @@ export const CAMPAIGN_LEVELS: CampaignLevel[] = [
       [
         2,
         0,
-        0,
+        1,
         1
       ],
       [
         2,
         2,
         3,
-        1
+        3
       ],
       [
         2,
-        3,
+        2,
         3,
         3
       ]

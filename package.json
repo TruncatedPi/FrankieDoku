@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "npx tsx --test src/engine/engine.test.ts"
+    "test": "npx tsx --test src/engine/engine.test.ts src/engine/contradiction.test.ts"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.1",

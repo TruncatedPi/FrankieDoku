@@ -1,5 +1,5 @@
 import { Coordinate, Puzzle } from './types';
-import { isPuzzleUnique, solvePuzzle } from './solver';
+import { isPuzzleUnique, solvePuzzle, validatePuzzleIntegrity } from './solver';
 
 /**
  * Seedable pseudo-random number generator (Mulberry32).
@@ -238,7 +238,10 @@ export function generatePuzzle(
 
       const sols = solvePuzzle(candidatePuzzle, 2);
       if (sols.length === 1) {
-        return candidatePuzzle;
+        const integrity = validatePuzzleIntegrity(candidatePuzzle);
+        if (integrity.valid) {
+          return candidatePuzzle;
+        }
       }
 
       // Find alternative solution
@@ -322,11 +325,11 @@ export function generateDailyPuzzle(dateString: string): Puzzle {
     { row: 4, col: 3 },
   ];
   const fallbackRegions = [
-    [0, 0, 1, 1, 2],
+    [0, 0, 0, 2, 2],
     [0, 1, 1, 2, 2],
-    [3, 3, 1, 2, 2],
-    [3, 3, 4, 4, 2],
-    [3, 4, 4, 4, 4],
+    [0, 3, 1, 2, 2],
+    [0, 3, 3, 2, 2],
+    [0, 3, 4, 4, 4],
   ];
 
   return {

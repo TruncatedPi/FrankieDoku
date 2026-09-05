@@ -138,7 +138,12 @@ export function useGameState() {
     if (cells.length === 0 || isWon || isGameOver) return;
 
     const size = currentPuzzle.size;
-    const conflicts = findConflicts(cells, size, currentPuzzle.regions);
+    const conflicts = findConflicts(
+      cells,
+      size,
+      currentPuzzle.regions,
+      currentPuzzle.solution
+    );
 
     // Update conflict visual flags on cells
     setCells((prev) =>
@@ -289,8 +294,12 @@ export function useGameState() {
           .map((c) => ({ row: c.row, col: c.col }));
 
         const isValid = isValidPlacement(row, col, existingCats, currentPuzzle.regions);
-        if (!isValid) {
-          // Rule violation: deduct heart
+        const isSolutionCat =
+          !currentPuzzle.solution ||
+          currentPuzzle.solution.some((s) => s.row === row && s.col === col);
+
+        if (!isValid || !isSolutionCat) {
+          // Rule violation or misplaced cat: deduct heart
           sound.playHeartLost();
           sound.triggerHaptic('heavy');
           const nextHearts = hearts - 1;
