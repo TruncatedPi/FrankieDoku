@@ -282,26 +282,28 @@ export function useGameState() {
 
     // Process state change
     let autoCrossedList: { row: number; col: number; prevState: CellState }[] = [];
+    let isMistakePlacement = false;
 
     if (targetState === 'cat') {
-      sound.playMeow();
-      sound.triggerHaptic('medium');
+      const existingCats: Coordinate[] = cells
+        .filter((c) => c.state === 'cat' && !(c.row === row && c.col === col))
+        .map((c) => ({ row: c.row, col: c.col }));
 
-      // Check for illegal move in Classic mode (heart penalty)
-      if (settings.playStyle === 'classic') {
-        const existingCats: Coordinate[] = cells
-          .filter((c) => c.state === 'cat' && !(c.row === row && c.col === col))
-          .map((c) => ({ row: c.row, col: c.col }));
+      const isValid = isValidPlacement(row, col, existingCats, currentPuzzle.regions);
+      const isSolutionCat =
+        !currentPuzzle.solution ||
+        currentPuzzle.solution.some((s) => s.row === row && s.col === col);
 
-        const isValid = isValidPlacement(row, col, existingCats, currentPuzzle.regions);
-        const isSolutionCat =
-          !currentPuzzle.solution ||
-          currentPuzzle.solution.some((s) => s.row === row && s.col === col);
+      if (!isValid || !isSolutionCat) {
+        // Rule violation or misplaced cat:
+        // Convert mistake into a RED X so future row/col/region logic is NOT corrupted!
+        isMistakePlacement = true;
+        targetState = 'mark';
 
-        if (!isValid || !isSolutionCat) {
-          // Rule violation or misplaced cat: deduct heart
-          sound.playHeartLost();
-          sound.triggerHaptic('heavy');
+        sound.playHeartLost();
+        sound.triggerHaptic('heavy');
+
+        if (settings.playStyle === 'classic') {
           const nextHearts = hearts - 1;
           setHearts(nextHearts);
           if (nextHearts <= 0) {
@@ -309,22 +311,25 @@ export function useGameState() {
             setIsTimerRunning(false);
           }
         }
-      }
+      } else {
+        sound.playMeow();
+        sound.triggerHaptic('medium');
 
-      // Auto-Cross helpers if enabled
-      if (settings.autoCross) {
-        const toCross = getAutoCrossCells(
-          row,
-          col,
-          currentPuzzle.size,
-          currentPuzzle.regions,
-          cells
-        );
-        autoCrossedList = toCross.map((coord) => ({
-          row: coord.row,
-          col: coord.col,
-          prevState: 'empty',
-        }));
+        // Auto-Cross helpers if enabled
+        if (settings.autoCross) {
+          const toCross = getAutoCrossCells(
+            row,
+            col,
+            currentPuzzle.size,
+            currentPuzzle.regions,
+            cells
+          );
+          autoCrossedList = toCross.map((coord) => ({
+            row: coord.row,
+            col: coord.col,
+            prevState: 'empty',
+          }));
+        }
       }
     } else if (targetState === 'mark') {
       sound.playPop();
@@ -338,7 +343,12 @@ export function useGameState() {
     setCells((prev) => {
       const next: BoardCell[] = prev.map((cell) => {
         if (cell.row === row && cell.col === col) {
-          return { ...cell, state: targetState as CellState, isHinted: false };
+          return {
+            ...cell,
+            state: targetState as CellState,
+            isMistake: isMistakePlacement ? true : (targetState === 'empty' ? false : cell.isMistake),
+            isHinted: false,
+          };
         }
         if (autoCrossedList.some((ac) => ac.row === cell.row && ac.col === cell.col)) {
           return { ...cell, state: 'mark' as CellState, isHinted: false };
@@ -354,6 +364,7 @@ export function useGameState() {
       col,
       prevState: currentCell.state,
       newState: targetState,
+      isMistake: isMistakePlacement,
       autoCrossed: autoCrossedList.length > 0 ? autoCrossedList : undefined,
       player: gameMode === 'twoplayer' ? currentPlayer : undefined,
     };
@@ -381,7 +392,7 @@ export function useGameState() {
     setCells((prev) =>
       prev.map((cell) => {
         if (cell.row === lastMove.row && cell.col === lastMove.col) {
-          return { ...cell, state: lastMove.prevState };
+          return { ...cell, state: lastMove.prevState, isMistake: false };
         }
         if (lastMove.autoCrossed?.some((ac) => ac.row === cell.row && ac.col === cell.col)) {
           return { ...cell, state: 'empty' };
@@ -409,7 +420,7 @@ export function useGameState() {
     setCells((prev) =>
       prev.map((cell) => {
         if (cell.row === moveToRedo.row && cell.col === moveToRedo.col) {
-          return { ...cell, state: moveToRedo.newState };
+          return { ...cell, state: moveToRedo.newState, isMistake: Boolean(moveToRedo.isMistake) };
         }
         if (moveToRedo.autoCrossed?.some((ac) => ac.row === cell.row && ac.col === cell.col)) {
           return { ...cell, state: 'mark' };

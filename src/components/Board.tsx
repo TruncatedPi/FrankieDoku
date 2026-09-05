@@ -218,10 +218,37 @@ export const Board: React.FC<BoardProps> = ({
                 </div>
               )}
 
-              {/* 'X' Elimination Mark - 90% of square cell size and darker for contrast */}
+              {/* 'X' Elimination Mark (Normal or Mistake) with Crisp White Outline */}
               {cell.state === 'mark' && (
-                <div className="w-[90%] h-[90%] flex items-center justify-center animate-bounce-small text-slate-900 dark:text-slate-100">
-                  <X className="w-full h-full stroke-[3.5]" />
+                <div className="w-[90%] h-[90%] flex items-center justify-center animate-bounce-small pointer-events-none select-none">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-full h-full drop-shadow-sm"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {/* High-contrast crisp white outline/backdrop stroke */}
+                    <line x1="18" y1="6" x2="6" y2="18" stroke="#ffffff" strokeWidth="5.5" />
+                    <line x1="6" y1="6" x2="18" y2="18" stroke="#ffffff" strokeWidth="5.5" />
+                    {/* Inner stroke: Vibrant Red if mistake, Dark Slate if normal elimination mark */}
+                    <line
+                      x1="18"
+                      y1="6"
+                      x2="6"
+                      y2="18"
+                      stroke={cell.isMistake ? '#ef4444' : '#0f172a'}
+                      strokeWidth="3.2"
+                    />
+                    <line
+                      x1="6"
+                      y1="6"
+                      x2="18"
+                      y2="18"
+                      stroke={cell.isMistake ? '#ef4444' : '#0f172a'}
+                      strokeWidth="3.2"
+                    />
+                  </svg>
                 </div>
               )}
 

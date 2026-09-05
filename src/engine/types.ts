@@ -23,6 +23,7 @@ export interface BoardCell {
   hasConflict?: boolean;
   isHighlighted?: boolean;
   isHinted?: boolean;
+  isMistake?: boolean;
 }
 
 export interface Move {
@@ -30,6 +31,7 @@ export interface Move {
   col: number;
   prevState: CellState;
   newState: CellState;
+  isMistake?: boolean;
   autoCrossed?: { row: number; col: number; prevState: CellState }[];
   player?: 1 | 2; // For two-player pass-and-play
 }
