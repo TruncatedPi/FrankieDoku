@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbd0a5" />
+      <stop offset="100%" stop-color="#f4a261" />
+    </linearGradient>
+    <linearGradient id="furGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#fff5eb" />
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+  
+  <!-- Rounded App Icon Background -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
+  
+  <!-- Outer glowing ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#ffffff" stroke-width="8" opacity="0.4" stroke-dasharray="16 12" />
+  
+  <!-- Cat Ears -->
+  <g filter="url(#softShadow)">
+    <!-- Left Ear -->
+    <path d="M 120 220 L 150 90 Q 190 80 215 150 Z" fill="#ffffff" />
+    <path d="M 135 200 L 155 110 Q 185 105 198 150 Z" fill="#ffb4a2" />
+    
+    <!-- Right Ear -->
+    <path d="M 392 220 L 362 90 Q 322 80 297 150 Z" fill="#ffffff" />
+    <path d="M 377 200 L 357 110 Q 327 105 314 150 Z" fill="#ffb4a2" />
+    
+    <!-- Cat Head Base -->
+    <ellipse cx="256" cy="285" rx="160" ry="140" fill="url(#furGrad)" />
+  </g>
+  
+  <!-- Orange Tabby Markings -->
+  <path d="M 230 155 Q 256 185 282 155 Q 256 170 230 155 Z" fill="#f4a261" />
+  <path d="M 240 185 Q 256 210 272 185 Q 256 195 240 185 Z" fill="#f4a261" />
+  
+  <!-- Cute Closed Happy Eyes (Curved Arcs) -->
+  <path d="M 175 270 Q 200 245 225 270" fill="none" stroke="#3d405b" stroke-width="12" stroke-linecap="round" />
+  <path d="M 287 270 Q 312 245 337 270" fill="none" stroke="#3d405b" stroke-width="12" stroke-linecap="round" />
+  
+  <!-- Pink Cheek Blushes -->
+  <ellipse cx="160" cy="305" rx="24" ry="15" fill="#ffb4a2" opacity="0.8" />
+  <ellipse cx="352" cy="305" rx="24" ry="15" fill="#ffb4a2" opacity="0.8" />
+  
+  <!-- Cute Nose -->
+  <polygon points="256,295 245,282 267,282" fill="#e07a5f" />
+  
+  <!-- Mouth (W-shape smile) -->
+  <path d="M 256 295 Q 256 320 236 320 Q 220 320 220 305" fill="none" stroke="#3d405b" stroke-width="8" stroke-linecap="round" />
+  <path d="M 256 295 Q 256 320 276 320 Q 292 320 292 305" fill="none" stroke="#3d405b" stroke-width="8" stroke-linecap="round" />
+  
+  <!-- Whiskers -->
+  <!-- Left Whiskers -->
+  <line x1="180" y1="295" x2="110" y2="285" stroke="#3d405b" stroke-width="6" stroke-linecap="round" opacity="0.6" />
+  <line x1="180" y1="315" x2="115" y2="325" stroke="#3d405b" stroke-width="6" stroke-linecap="round" opacity="0.6" />
+  
+  <!-- Right Whiskers -->
+  <line x1="332" y1="295" x2="402" y2="285" stroke="#3d405b" stroke-width="6" stroke-linecap="round" opacity="0.6" />
+  <line x1="332" y1="315" x2="397" y2="325" stroke="#3d405b" stroke-width="6" stroke-linecap="round" opacity="0.6" />
+  
+  <!-- Crown / Star (Like Meowdoku Queen cat!) -->
+  <g transform="translate(226, 75) scale(0.6)">
+    <polygon points="50,5 64,36 98,40 73,63 79,97 50,80 21,97 27,63 2,40 36,36" fill="#fcd34d" stroke="#f59e0b" stroke-width="4" />
+  </g>
+</svg>
