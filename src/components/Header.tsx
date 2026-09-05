@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-amber-950 dark:text-amber-100 flex items-center gap-1 leading-none">
-              Meowdoku!
+              SchroDoku!
             </h1>
             <span className="text-[10px] text-amber-700/80 dark:text-amber-300/80 font-medium">
               100% Ad-Free & Cozy

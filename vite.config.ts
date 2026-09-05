@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'cat-icon.svg'],
       manifest: {
-        name: 'Meowdoku - Cozy Cat Logic Puzzle',
-        short_name: 'Meowdoku',
+        name: 'SchroDoku - Cozy Cat Logic Puzzle',
+        short_name: 'SchroDoku',
         description: 'An ad-free, cozy cat-themed Queens/Star Battle logic puzzle game.',
         theme_color: '#fdf6ee',
         background_color: '#fdf6ee',

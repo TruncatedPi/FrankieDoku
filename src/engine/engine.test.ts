@@ -7,10 +7,10 @@ import {
   getAutoCrossCells,
   getSatisfiedUnits,
   generateHint,
-} from './solver.ts';
-import { generateDailyPuzzle, generatePuzzle } from './generator.ts';
-import { CAMPAIGN_LEVELS } from '../data/levels.ts';
-import { BoardCell, Puzzle } from './types.ts';
+} from './solver';
+import { generateDailyPuzzle, generatePuzzle } from './generator';
+import { CAMPAIGN_LEVELS } from '../data/levels';
+import { BoardCell, Puzzle } from './types';
 
 describe('Meowdoku Engine & Rules', () => {
   test('Aloof Rule & Queen Solvability on 5x5', () => {

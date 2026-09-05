@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.dan.meowdoku',
-  appName: 'Meowdoku',
+  appId: 'com.dan.schrodoku',
+  appName: 'SchroDoku',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

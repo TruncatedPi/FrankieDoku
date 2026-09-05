@@ -1,6 +1,6 @@
-# 🐱 Meowdoku! — Ad-Free Cozy Logic Puzzle
+# 🐱 SchroDoku! — Ad-Free Cozy Logic Puzzle
 
-A portable, cross-platform, ad-free recreation of the beloved **Meowdoku** (Star Battle / Queens logic puzzle game). Designed for personal play on **Windows**, **iPhone / iPad (iOS)**, and **Android**.
+A portable, cross-platform, ad-free recreation of the beloved **Meowdoku** (Star Battle / Queens logic puzzle game), named **SchroDoku**. Designed for personal play on **Windows**, **iPhone / iPad (iOS)**, and **Android**.
 
 ---
 
