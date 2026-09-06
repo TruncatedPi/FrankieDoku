@@ -1,4 +1,4 @@
-﻿import { test, describe } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import {
   solvePuzzle,
@@ -228,4 +228,63 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
     assert.strictEqual(discCheck.valid, false);
     assert.ok(discCheck.error?.includes('disconnected'));
   });
+
+  test('Hint engine explains HOW contradiction occurs and returns involved cells with faded states', () => {
+    const level1 = CAMPAIGN_LEVELS[0];
+    const size = level1.size;
+
+    // 1. Two touching cats (direct conflict)
+    const cells: BoardCell[] = [];
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        cells.push({
+          row: r,
+          col: c,
+          region: level1.regions[r][c],
+          state: 'empty',
+          hasConflict: false,
+          isHinted: false,
+        });
+      }
+    }
+
+    // Place a valid cat at solution spot (0, 1) and an invalid cat touching at (1, 2)
+    cells.find((c) => c.row === 0 && c.col === 1)!.state = 'cat';
+    cells.find((c) => c.row === 1 && c.col === 2)!.state = 'cat';
+
+    const hint = generateHint(level1, cells);
+    assert.ok(hint);
+    assert.strictEqual(hint.type, 'elimination');
+    assert.strictEqual(hint.row, 1);
+    assert.strictEqual(hint.col, 2);
+    assert.ok(hint.explanation.includes('touching') || hint.explanation.includes('conflicts with'));
+    assert.ok(hint.involvedCells && hint.involvedCells.length >= 2);
+    const conflicting = hint.involvedCells.find((inv) => inv.row === 0 && inv.col === 1);
+    assert.ok(conflicting, 'Involved cells must include the conflicting cat at (0, 1)');
+    assert.strictEqual(conflicting?.highlight, true);
+
+    // 2. Direct rule elimination on empty square
+    const cells2: BoardCell[] = [];
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        cells2.push({
+          row: r,
+          col: c,
+          region: level1.regions[r][c],
+          state: 'empty',
+          hasConflict: false,
+          isHinted: false,
+        });
+      }
+    }
+    // Place a valid cat at (0, 1). Square (0, 0) is empty in same row.
+    cells2.find((c) => c.row === 0 && c.col === 1)!.state = 'cat';
+    const ruleHint = generateHint(level1, cells2);
+    assert.ok(ruleHint);
+    assert.strictEqual(ruleHint.type, 'elimination');
+    assert.ok(ruleHint.involvedCells && ruleHint.involvedCells.length >= 2);
+    const targetFaded = ruleHint.involvedCells.find((inv) => inv.row === ruleHint.row && inv.col === ruleHint.col);
+    assert.strictEqual(targetFaded?.fadedState, 'mark');
+  });
 });
+

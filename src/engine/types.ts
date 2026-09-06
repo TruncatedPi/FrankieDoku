@@ -89,9 +89,18 @@ export interface GameStats {
   bestTimesBySize: Record<number, number>;
 }
 
+export interface HintInvolvedCell {
+  row: number;
+  col: number;
+  fadedState?: 'cat' | 'mark';
+  highlight?: boolean;
+  reason?: 'conflict' | 'forced_empty' | 'starved_unit' | 'caused_by';
+}
+
 export interface HintResult {
   type: 'elimination' | 'placement';
   row: number;
   col: number;
   explanation: string;
+  involvedCells?: HintInvolvedCell[];
 }

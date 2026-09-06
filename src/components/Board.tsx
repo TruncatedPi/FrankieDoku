@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { BoardCell, CatBreed, InputMode, Puzzle, ThemePalette } from '../engine/types';
+import { BoardCell, CatBreed, HintInvolvedCell, HintResult, InputMode, Puzzle, ThemePalette } from '../engine/types';
 import { CatIcon } from './CatIcon';
 import { X, Sparkles } from 'lucide-react';
 
@@ -17,6 +17,7 @@ interface BoardProps {
   onCellAction: (row: number, col: number, actionType: 'tap' | 'doubleTap' | 'cat' | 'mark' | 'drag') => void;
   disabled?: boolean;
   playerBreeds?: Record<1 | 2, CatBreed>;
+  activeHint?: HintResult | null;
 }
 
 // Distinct, cozy pastel palettes for regions (up to 12 regions)
@@ -107,9 +108,20 @@ export const Board: React.FC<BoardProps> = ({
   onCellAction,
   disabled = false,
   playerBreeds,
+  activeHint = null,
 }) => {
   const size = puzzle.size;
   const palette = REGION_PALETTES[theme] || REGION_PALETTES.cozy;
+
+  const involvedMap = React.useMemo(() => {
+    const map = new Map<string, HintInvolvedCell>();
+    if (activeHint?.involvedCells) {
+      for (const inv of activeHint.involvedCells) {
+        map.set(`${inv.row},${inv.col}`, inv);
+      }
+    }
+    return map;
+  }, [activeHint]);
 
   const isDragging = useRef(false);
   const lastTappedRef = useRef<{ row: number; col: number; time: number; wasCat: boolean } | null>(null);
@@ -181,6 +193,20 @@ export const Board: React.FC<BoardProps> = ({
           const reg = cell.region;
           const bgCol = palette[reg % palette.length];
 
+          const isPrimaryHint = Boolean(activeHint && activeHint.row === cell.row && activeHint.col === cell.col);
+          const involved = involvedMap.get(`${cell.row},${cell.col}`);
+          const isConflictInvolved = involved?.reason === 'conflict';
+
+          // Faded previews
+          const showFadedCat = cell.state === 'empty' && (
+            (isPrimaryHint && activeHint?.type === 'placement') ||
+            involved?.fadedState === 'cat'
+          );
+          const showFadedMark = cell.state === 'empty' && !showFadedCat && (
+            (isPrimaryHint && activeHint?.type === 'elimination') ||
+            involved?.fadedState === 'mark'
+          );
+
           // Compute border thickness based on whether neighbor has different region
           const hasTopBorder = cell.row > 0 && puzzle.regions[cell.row - 1][cell.col] !== reg;
           const hasBottomBorder = cell.row < size - 1 && puzzle.regions[cell.row + 1][cell.col] !== reg;
@@ -214,11 +240,15 @@ export const Board: React.FC<BoardProps> = ({
                   ? 'bg-rose-400/80 animate-shake ring-2 ring-rose-500 z-10'
                   : ''
               } ${
-                cell.isHinted
-                  ? 'ring-4 ring-amber-400 animate-pulse z-10 rounded-lg shadow-lg'
+                isPrimaryHint
+                  ? 'ring-4 ring-amber-400 animate-pulse z-20 rounded-lg shadow-lg'
+                  : involved?.highlight
+                  ? isConflictInvolved
+                    ? 'ring-2 ring-rose-500 bg-rose-400/30 z-10 rounded-lg'
+                    : 'ring-2 ring-amber-400/90 bg-amber-400/20 z-10 rounded-lg'
                   : ''
               } ${
-                isSatisfiedUnit ? 'opacity-40 grayscale-[25%]' : 'opacity-100'
+                isSatisfiedUnit && !isPrimaryHint && !involved ? 'opacity-40 grayscale-[25%]' : 'opacity-100'
               }`}
               style={{
                 backgroundColor: cell.hasConflict && highlightConflicts ? undefined : bgCol,
@@ -232,13 +262,24 @@ export const Board: React.FC<BoardProps> = ({
                 borderRightColor: hasRightBorder ? '#334155' : 'rgba(100, 116, 139, 0.25)',
               }}
             >
-              {/* Cat Sprite */}
+              {/* Placed Cat Sprite */}
               {cell.state === 'cat' && (
                 <div className="w-[84%] h-[84%] animate-pop-in flex items-center justify-center drop-shadow-md">
                   <CatIcon
                     breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
-                    hasConflict={Boolean(cell.hasConflict && highlightConflicts)}
-                    expression={cell.hasConflict ? 'shocked' : 'happy'}
+                    hasConflict={Boolean((cell.hasConflict && highlightConflicts) || isConflictInvolved)}
+                    expression={cell.hasConflict || isConflictInvolved ? 'shocked' : 'happy'}
+                  />
+                </div>
+              )}
+
+              {/* Faded Ghost Cat (Hint preview) */}
+              {showFadedCat && (
+                <div className="w-[84%] h-[84%] flex items-center justify-center opacity-50 scale-90 pointer-events-none animate-pulse drop-shadow-sm">
+                  <CatIcon
+                    breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
+                    hasConflict={false}
+                    expression="happy"
                   />
                 </div>
               )}
@@ -277,8 +318,40 @@ export const Board: React.FC<BoardProps> = ({
                 </div>
               )}
 
-              {/* Hint Sparkle Indicator */}
-              {cell.isHinted && (
+              {/* Faded Ghost X Mark (Hint preview) */}
+              {showFadedMark && (
+                <div className="w-[85%] h-[85%] flex items-center justify-center opacity-50 scale-85 pointer-events-none select-none">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-full h-full drop-shadow-xs"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" stroke="#ffffff" strokeWidth="5.5" />
+                    <line x1="6" y1="6" x2="18" y2="18" stroke="#ffffff" strokeWidth="5.5" />
+                    <line
+                      x1="18"
+                      y1="6"
+                      x2="6"
+                      y2="18"
+                      stroke={involved?.reason === 'starved_unit' || isConflictInvolved ? '#ef4444' : '#0f172a'}
+                      strokeWidth="3.2"
+                    />
+                    <line
+                      x1="6"
+                      y1="6"
+                      x2="18"
+                      y2="18"
+                      stroke={involved?.reason === 'starved_unit' || isConflictInvolved ? '#ef4444' : '#0f172a'}
+                      strokeWidth="3.2"
+                    />
+                  </svg>
+                </div>
+              )}
+
+              {/* Hint Sparkle Indicator on primary hinted cell */}
+              {isPrimaryHint && (
                 <div className="absolute top-1 right-1 text-amber-500 animate-bounce">
                   <Sparkles className="w-3.5 h-3.5 fill-amber-400" />
                 </div>

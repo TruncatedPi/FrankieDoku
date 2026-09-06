@@ -133,6 +133,7 @@ export function useGameState() {
     satisfiedRows: satisfied.rows, satisfiedCols: satisfied.cols, satisfiedRegions: satisfied.regions,
     remainingCats: Math.max(0, currentPuzzle.size - game.cells.filter(c => c.state === 'cat').length),
     handleCellAction, handleHint,
+    handleDismissHint: () => { setActiveHint(null); dispatch({ type: 'dismissHint' }); },
     handleUndo: () => { if (!isGenerating) { setActiveHint(null); dispatch({ type: 'undo' }); } },
     handleRedo: () => { if (!isGenerating) { setActiveHint(null); dispatch({ type: 'redo' }); } },
     handleReset: () => startGame(currentPuzzle, game.gameMode, game.twoPlayerConfig),

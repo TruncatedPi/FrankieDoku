@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Volume2, VolumeX, Heart, Shield, Sparkles, Palette, Trash2 } from 'lucide-react';
 import { UserSettings, CatBreed, PlayStyle, ThemePalette } from '../engine/types';
 import { CatIcon } from './CatIcon';
+import { APP_VERSION } from '../utils/version';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -278,6 +279,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Trash2 className="w-3.5 h-3.5" />
               <span>Reset Game Progress</span>
             </button>
+          </div>
+
+          {/* App Version Info */}
+          <div className="pt-1 text-center">
+            <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+              SchroDoku {APP_VERSION}
+            </p>
           </div>
         </div>
       </div>

@@ -42,6 +42,7 @@ export type GameAction =
   | { type: 'start'; game: GameSession }
   | { type: 'tick' }
   | { type: 'hint'; hint: HintResult }
+  | { type: 'dismissHint' }
   | { type: 'undo' | 'redo' }
   | { type: 'move'; row: number; col: number; action: CellAction; inputMode: InputMode; settings: UserSettings };
 
@@ -49,6 +50,7 @@ export function gameReducer(game: GameSession, action: GameAction): GameSession 
   if (action.type === 'start') return action.game;
   if (game.isWon || game.isGameOver) return game;
   if (action.type === 'tick') return { ...game, timerSeconds: game.timerSeconds + 1 };
+  if (action.type === 'dismissHint') return { ...game, cells: game.cells.map(c => c.isHinted ? { ...c, isHinted: false } : c) };
   if (action.type === 'hint') return { ...game, cells: game.cells.map(c => ({ ...c, isHinted: c.row === action.hint.row && c.col === action.hint.col })) };
   if (action.type === 'undo' || action.type === 'redo') {
     const undo = action.type === 'undo';

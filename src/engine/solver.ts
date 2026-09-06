@@ -1,4 +1,4 @@
-import { Coordinate, Puzzle, BoardCell, HintResult } from './types';
+import { Coordinate, Puzzle, BoardCell, HintResult, HintInvolvedCell } from './types';
 import { assertBoardSize, MIN_SIZE, MAX_SIZE } from './constants';
 
 /**
@@ -198,13 +198,19 @@ export function getSatisfiedUnits(
   };
 }
 
+function describeCatConflict(a: Coordinate, b: Coordinate, regions: number[][]): string {
+  const parts: string[] = [];
+  if (Math.abs(a.row - b.row) <= 1 && Math.abs(a.col - b.col) <= 1) parts.push('touching');
+  else if (a.row === b.row) parts.push('same row');
+  else if (a.col === b.col) parts.push('same column');
+  else if (regions[a.row][a.col] === regions[b.row][b.col]) parts.push('same territory');
+  return parts.length > 0 ? parts.join(' and ') : 'rule violation';
+}
+
 /**
  * Smart logical hint deduction engine:
- * 1. Checks if existing placed cats contradict the solution -> prompts to remove them!
- * 2. Checks if the player mistakenly marked a cat spot with 'X' -> prompts to unmark!
- * 3. Checks if any row/col/region has only 1 remaining valid spot -> MUST be a Cat!
- * 4. Checks if an empty cell cannot be a cat -> MUST be an 'X'!
- * 5. Suggests the next cat placement without contradicting placed cats.
+ * Explains HOW a cell causes a contradiction or constraint issue,
+ * returns involved cells with faded state and highlighting.
  */
 export function generateHint(
   puzzle: Puzzle,
@@ -217,17 +223,107 @@ export function generateHint(
   if (solutions.length === 0) return null;
   const solution = solutions[0];
   const solutionSet = new Set(solution.map((s) => `${s.row},${s.col}`));
+  const placedCats = cells.filter((c) => c.state === 'cat');
 
   // 1. FIRST: Check if the player has placed any INCORRECT cats!
-  // If a cat is placed that is NOT in the solution, we MUST tell the player to remove it first,
-  // otherwise any further hint would contradict their placed cat!
   for (const cell of cells) {
     if (cell.state === 'cat' && !solutionSet.has(`${cell.row},${cell.col}`)) {
+      // 1A. Check for direct conflict with another placed cat
+      const conflictingCat = placedCats.find(
+        (c) => !(c.row === cell.row && c.col === cell.col) && !isValidPlacement(cell.row, cell.col, [c], regions)
+      );
+      if (conflictingCat) {
+        const relation = describeCatConflict(cell, conflictingCat, regions);
+        return {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! It conflicts with the cat in Row ${conflictingCat.row + 1}, Column ${conflictingCat.col + 1} (${relation}). Remove it to clear the contradiction. 😿`,
+          involvedCells: [
+            { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
+            { row: conflictingCat.row, col: conflictingCat.col, highlight: true, reason: 'conflict' },
+          ],
+        };
+      }
+
+      // 1B. Check if this cat starves another row, column, or region
+      for (let r = 0; r < size; r++) {
+        if (placedCats.some((c) => c.row === r)) continue;
+        const remaining = cells.filter(
+          (c) => c.row === r && c.state !== 'mark' && isValidPlacement(c.row, c.col, placedCats, regions)
+        );
+        if (remaining.length === 0) {
+          const wiped = cells.filter(
+            (c) => c.row === r && c.state === 'empty' && !isValidPlacement(c.row, c.col, [cell], regions)
+          );
+          return {
+            type: 'elimination',
+            row: cell.row,
+            col: cell.col,
+            explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! It eliminates all open squares in Row ${r + 1}. Remove it to clear the contradiction. 😿`,
+            involvedCells: [
+              { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
+              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+            ],
+          };
+        }
+      }
+
+      for (let c = 0; c < size; c++) {
+        if (placedCats.some((cat) => cat.col === c)) continue;
+        const remaining = cells.filter(
+          (item) => item.col === c && item.state !== 'mark' && isValidPlacement(item.row, item.col, placedCats, regions)
+        );
+        if (remaining.length === 0) {
+          const wiped = cells.filter(
+            (item) => item.col === c && item.state === 'empty' && !isValidPlacement(item.row, item.col, [cell], regions)
+          );
+          return {
+            type: 'elimination',
+            row: cell.row,
+            col: cell.col,
+            explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! It eliminates all open squares in Column ${c + 1}. Remove it to clear the contradiction. 😿`,
+            involvedCells: [
+              { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
+              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+            ],
+          };
+        }
+      }
+
+      for (let reg = 0; reg < size; reg++) {
+        if (placedCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+        const remaining = cells.filter(
+          (item) => regions[item.row][item.col] === reg && item.state !== 'mark' && isValidPlacement(item.row, item.col, placedCats, regions)
+        );
+        if (remaining.length === 0) {
+          const wiped = cells.filter(
+            (item) => regions[item.row][item.col] === reg && item.state === 'empty' && !isValidPlacement(item.row, item.col, [cell], regions)
+          );
+          return {
+            type: 'elimination',
+            row: cell.row,
+            col: cell.col,
+            explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! It eliminates all open squares in Territory ${reg + 1}. Remove it to clear the contradiction. 😿`,
+            involvedCells: [
+              { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
+              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+            ],
+          };
+        }
+      }
+
+      // 1C. Fallback off-solution placed cat
+      const solCat = solution.find((s) => s.row === cell.row);
       return {
         type: 'elimination',
         row: cell.row,
         col: cell.col,
         explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! Remove it to clear the contradiction. 😿`,
+        involvedCells: [
+          { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
+          ...(solCat ? [{ row: solCat.row, col: solCat.col, fadedState: 'cat' as const, highlight: true, reason: 'caused_by' as const }] : []),
+        ],
       };
     }
   }
@@ -236,88 +332,224 @@ export function generateHint(
   for (const sol of solution) {
     const cell = cells.find((c) => c.row === sol.row && c.col === sol.col);
     if (cell && cell.state === 'mark') {
+      const reg = regions[sol.row][sol.col];
+      const otherRegCells = cells.filter(
+        (c) => regions[c.row][c.col] === reg && !(c.row === sol.row && c.col === sol.col)
+      );
       return {
         type: 'placement',
         row: sol.row,
         col: sol.col,
         explanation: `The ❌ in Row ${sol.row + 1}, Column ${sol.col + 1} was placed by mistake! A happy cat belongs here. 🐱`,
+        involvedCells: [
+          { row: sol.row, col: sol.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
+          ...otherRegCells.slice(0, 4).map((c) => ({
+            row: c.row,
+            col: c.col,
+            fadedState: c.state === 'empty' ? ('mark' as const) : undefined,
+            highlight: true,
+            reason: 'forced_empty' as const,
+          })),
+        ],
       };
     }
   }
 
-  const placedCats = cells.filter(c => c.state === 'cat');
-  // Explain direct rule eliminations before consulting the stored answer.
+  // 3. Direct rule eliminations on empty cells before consulting answer
   for (const cell of cells) {
     if (cell.state !== 'empty') continue;
-    const blocker = placedCats.find(cat => !isValidPlacement(cell.row, cell.col, [cat], regions));
-    if (blocker) return { type: 'elimination', row: cell.row, col: cell.col,
-      explanation: `A cat here would share a row, column, or territory with the cat at Row ${blocker.row + 1}, Column ${blocker.col + 1}, or touch it. Mark this square with an ❌.` };
+    const blocker = placedCats.find((cat) => !isValidPlacement(cell.row, cell.col, [cat], regions));
+    if (blocker) {
+      const relation = describeCatConflict(cell, blocker, regions);
+      return {
+        type: 'elimination',
+        row: cell.row,
+        col: cell.col,
+        explanation: `A cat here would conflict (${relation}) with the cat at Row ${blocker.row + 1}, Column ${blocker.col + 1}. Mark this square with an ❌.`,
+        involvedCells: [
+          { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+          { row: blocker.row, col: blocker.col, highlight: true, reason: 'conflict' },
+        ],
+      };
+    }
   }
 
-  // 3. THIRD: Check for forced moves in rows (where row has no cat yet)
+  // 4. Forced moves in rows
   for (let r = 0; r < size; r++) {
     const rowCells = cells.filter((c) => c.row === r);
     const hasCat = rowCells.some((c) => c.state === 'cat');
     if (!hasCat) {
       const candidates = rowCells.filter((c) => c.state === 'empty' && isValidPlacement(c.row, c.col, placedCats, regions));
       if (candidates.length === 1 && solutionSet.has(`${candidates[0].row},${candidates[0].col}`)) {
+        const target = candidates[0];
+        const others = rowCells.filter((c) => !(c.row === target.row && c.col === target.col));
         return {
           type: 'placement',
-          row: candidates[0].row,
-          col: candidates[0].col,
-          explanation: `In Row ${r + 1}, only this square remains open for a cat!`,
+          row: target.row,
+          col: target.col,
+          explanation: `In Row ${r + 1}, all other squares are blocked or eliminated. Only this square remains open for a cat!`,
+          involvedCells: [
+            { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
+            ...others.map((o) => ({
+              row: o.row,
+              col: o.col,
+              fadedState: o.state === 'empty' ? ('mark' as const) : undefined,
+              highlight: true,
+              reason: 'forced_empty' as const,
+            })),
+          ],
         };
       }
     }
   }
 
-  // 4. FOURTH: Check for forced moves in columns
+  // 5. Forced moves in columns
   for (let c = 0; c < size; c++) {
     const colCells = cells.filter((item) => item.col === c);
     const hasCat = colCells.some((item) => item.state === 'cat');
     if (!hasCat) {
-      const candidates = colCells.filter((item) => item.state === 'empty');
+      const candidates = colCells.filter((item) => item.state === 'empty' && isValidPlacement(item.row, item.col, placedCats, regions));
       if (candidates.length === 1 && solutionSet.has(`${candidates[0].row},${candidates[0].col}`)) {
+        const target = candidates[0];
+        const others = colCells.filter((item) => !(item.row === target.row && item.col === target.col));
         return {
           type: 'placement',
-          row: candidates[0].row,
-          col: candidates[0].col,
-          explanation: `In Column ${c + 1}, only this square remains open for a cat!`,
+          row: target.row,
+          col: target.col,
+          explanation: `In Column ${c + 1}, all other squares are blocked or eliminated. Only this square remains open for a cat!`,
+          involvedCells: [
+            { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
+            ...others.map((o) => ({
+              row: o.row,
+              col: o.col,
+              fadedState: o.state === 'empty' ? ('mark' as const) : undefined,
+              highlight: true,
+              reason: 'forced_empty' as const,
+            })),
+          ],
         };
       }
     }
   }
 
-  // 5. FIFTH: Check for forced moves in regions
+  // 6. Forced moves in regions
   for (let reg = 0; reg < size; reg++) {
     const regCells = cells.filter((item) => regions[item.row][item.col] === reg);
     const hasCat = regCells.some((item) => item.state === 'cat');
     if (!hasCat) {
-      const candidates = regCells.filter((item) => item.state === 'empty');
+      const candidates = regCells.filter((item) => item.state === 'empty' && isValidPlacement(item.row, item.col, placedCats, regions));
       if (candidates.length === 1 && solutionSet.has(`${candidates[0].row},${candidates[0].col}`)) {
+        const target = candidates[0];
+        const others = regCells.filter((item) => !(item.row === target.row && item.col === target.col));
         return {
           type: 'placement',
-          row: candidates[0].row,
-          col: candidates[0].col,
-          explanation: `In this colored territory, only this square remains open for a cat!`,
+          row: target.row,
+          col: target.col,
+          explanation: `In colored Territory ${reg + 1}, all other squares are blocked or eliminated. Only this square remains open for a cat!`,
+          involvedCells: [
+            { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
+            ...others.map((o) => ({
+              row: o.row,
+              col: o.col,
+              fadedState: o.state === 'empty' ? ('mark' as const) : undefined,
+              highlight: true,
+              reason: 'forced_empty' as const,
+            })),
+          ],
         };
       }
     }
   }
 
-  // 6. SIXTH: Deduce cells that cannot be cats (must be 'X')
+  // 7. Lookahead contradiction deduction: Check empty cells that cannot be cats
   for (const cell of cells) {
     if (cell.state === 'empty' && !solutionSet.has(`${cell.row},${cell.col}`)) {
+      // Simulate placing a hypothetical cat at (cell.row, cell.col)
+      const hypotheticalCats = [...placedCats, { row: cell.row, col: cell.col }];
+
+      // Check if this hypothetical cat starves any row
+      for (let r = 0; r < size; r++) {
+        if (hypotheticalCats.some((cat) => cat.row === r)) continue;
+        const remaining = cells.filter(
+          (c) => c.row === r && c.state !== 'mark' && isValidPlacement(c.row, c.col, hypotheticalCats, regions)
+        );
+        if (remaining.length === 0) {
+          const wiped = cells.filter(
+            (c) => c.row === r && c.state === 'empty' && !isValidPlacement(c.row, c.col, [{ row: cell.row, col: cell.col }], regions)
+          );
+          return {
+            type: 'elimination',
+            row: cell.row,
+            col: cell.col,
+            explanation: `Placing a cat at Row ${cell.row + 1}, Column ${cell.col + 1} eliminates all valid spots in Row ${r + 1}! Therefore, mark this square with an ❌.`,
+            involvedCells: [
+              { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+            ],
+          };
+        }
+      }
+
+      // Check if this hypothetical cat starves any column
+      for (let c = 0; c < size; c++) {
+        if (hypotheticalCats.some((cat) => cat.col === c)) continue;
+        const remaining = cells.filter(
+          (item) => item.col === c && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
+        );
+        if (remaining.length === 0) {
+          const wiped = cells.filter(
+            (item) => item.col === c && item.state === 'empty' && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
+          );
+          return {
+            type: 'elimination',
+            row: cell.row,
+            col: cell.col,
+            explanation: `Placing a cat at Row ${cell.row + 1}, Column ${cell.col + 1} eliminates all valid spots in Column ${c + 1}! Therefore, mark this square with an ❌.`,
+            involvedCells: [
+              { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+            ],
+          };
+        }
+      }
+
+      // Check if this hypothetical cat starves any region
+      for (let reg = 0; reg < size; reg++) {
+        if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+        const remaining = cells.filter(
+          (item) => regions[item.row][item.col] === reg && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
+        );
+        if (remaining.length === 0) {
+          const wiped = cells.filter(
+            (item) => regions[item.row][item.col] === reg && item.state === 'empty' && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
+          );
+          return {
+            type: 'elimination',
+            row: cell.row,
+            col: cell.col,
+            explanation: `Placing a cat at Row ${cell.row + 1}, Column ${cell.col + 1} eliminates all valid spots in Territory ${reg + 1}! Therefore, mark this square with an ❌.`,
+            involvedCells: [
+              { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+            ],
+          };
+        }
+      }
+
+      // Fallback elimination
       return {
         type: 'elimination',
         row: cell.row,
         col: cell.col,
         explanation: `A cat here cannot be part of a complete solution. Mark it with an ❌!`,
+        involvedCells: [
+          { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+        ],
       };
     }
   }
 
-  // 7. SEVENTH: Place an unplaced cat from solution (only if row/col/region doesn't already have a cat!)
+  // 8. Place an unplaced cat from solution
   for (const sol of solution) {
     const cell = cells.find((c) => c.row === sol.row && c.col === sol.col);
     if (cell && cell.state === 'empty') {
@@ -330,6 +562,9 @@ export function generateHint(
           row: sol.row,
           col: sol.col,
           explanation: `A happy cat belongs right here in Row ${sol.row + 1}, Column ${sol.col + 1}! 🐱`,
+          involvedCells: [
+            { row: sol.row, col: sol.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
+          ],
         };
       }
     }

@@ -2,6 +2,7 @@ import React from 'react';
 import { GameMode, PlayStyle } from '../engine/types';
 import { Volume2, VolumeX, Settings, Heart, Calendar, Grid, Download, Users, RefreshCw } from 'lucide-react';
 import { CatIcon } from './CatIcon';
+import { APP_VERSION } from '../utils/version';
 
 interface HeaderProps {
   gameMode: GameMode;
@@ -70,9 +71,17 @@ export const Header: React.FC<HeaderProps> = ({
             <CatIcon breed="orange_tabby" expression="happy" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-amber-950 dark:text-amber-100 flex items-center gap-1 leading-none">
-              SchroDoku!
-            </h1>
+            <div className="flex items-center gap-1.5 leading-none mb-0.5">
+              <h1 className="text-xl font-bold tracking-tight text-amber-950 dark:text-amber-100 flex items-center gap-1">
+                SchroDoku!
+              </h1>
+              <span
+                data-testid="app-version"
+                className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-amber-200/80 dark:bg-amber-900/50 text-amber-950 dark:text-amber-200 border border-amber-300/50 shadow-xs"
+              >
+                {APP_VERSION}
+              </span>
+            </div>
             <span className="text-[10px] text-amber-700/80 dark:text-amber-300/80 font-medium">
               100% Ad-Free & Cozy
             </span>
