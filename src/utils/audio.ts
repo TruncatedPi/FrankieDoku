@@ -20,7 +20,9 @@ class SoundManager {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      // Navigation can invalidate the document while resume is pending (Firefox).
+      // Audio must never produce an unhandled rejection or interrupt gameplay.
+      void this.ctx.resume().catch(() => {});
     }
     return this.ctx;
   }

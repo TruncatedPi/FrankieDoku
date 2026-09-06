@@ -12,6 +12,9 @@ test('board settles, accepts keyboard input, and restores state after reload', a
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
   await page.goto('./');
+  // This test exercises session restoration after startup, not cancellation of
+  // the browser's initial service-worker installation during navigation.
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   const cell = page.locator('[data-row="0"][data-col="0"]');
   await cell.focus();
   await page.keyboard.press('Space');
