@@ -15,6 +15,8 @@ interface BoardProps {
   satisfiedCols: Set<number>;
   satisfiedRegions: Set<number>;
   onCellAction: (row: number, col: number, actionType: 'tap' | 'doubleTap' | 'cat' | 'mark' | 'drag') => void;
+  disabled?: boolean;
+  playerBreeds?: Record<1 | 2, CatBreed>;
 }
 
 // Distinct, cozy pastel palettes for regions (up to 12 regions)
@@ -103,14 +105,18 @@ export const Board: React.FC<BoardProps> = ({
   satisfiedCols,
   satisfiedRegions,
   onCellAction,
+  disabled = false,
+  playerBreeds,
 }) => {
   const size = puzzle.size;
   const palette = REGION_PALETTES[theme] || REGION_PALETTES.cozy;
 
   const isDragging = useRef(false);
-  const lastTappedRef = useRef<{ row: number; col: number; time: number } | null>(null);
+  const lastTappedRef = useRef<{ row: number; col: number; time: number; wasCat: boolean } | null>(null);
+  useEffect(() => { lastTappedRef.current = null; isDragging.current = false; }, [puzzle, inputMode]);
 
   const handlePointerDown = (row: number, col: number, e: React.PointerEvent) => {
+    if (disabled || !e.isPrimary) return;
     // Secondary click (right click) = always toggle Cat
     if (e.button === 2) {
       e.preventDefault();
@@ -125,16 +131,16 @@ export const Board: React.FC<BoardProps> = ({
     const last = lastTappedRef.current;
     if (last && last.row === row && last.col === col && now - last.time < 320) {
       lastTappedRef.current = null;
-      onCellAction(row, col, 'doubleTap');
+      if (inputMode === 'mark') onCellAction(row, col, last.wasCat ? 'mark' : 'doubleTap');
       return;
     }
 
-    lastTappedRef.current = { row, col, time: now };
+    lastTappedRef.current = { row, col, time: now, wasCat: cells[row * size + col]?.state === 'cat' };
     onCellAction(row, col, 'tap');
   };
 
   const handlePointerEnter = (row: number, col: number) => {
-    if (isDragging.current && inputMode === 'mark') {
+    if (!disabled && isDragging.current && inputMode === 'mark') {
       onCellAction(row, col, 'drag');
     }
   };
@@ -144,13 +150,25 @@ export const Board: React.FC<BoardProps> = ({
       isDragging.current = false;
     };
     window.addEventListener('pointerup', handlePointerUp);
-    return () => window.removeEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+    window.addEventListener('blur', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('blur', handlePointerUp);
+    };
   }, []);
 
   return (
     <div
       className="relative w-full max-w-[min(92vw,480px)] aspect-square mx-auto touch-none select-none rounded-3xl p-3 shadow-xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-amber-900/10 dark:border-white/10 transition-all duration-300"
       onContextMenu={(e) => e.preventDefault()}
+      aria-busy={disabled}
+      onPointerMove={e => {
+        if (e.pointerType !== 'touch' || !isDragging.current || disabled) return;
+        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLButtonElement>('[data-cell]');
+        if (target && e.currentTarget.contains(target)) handlePointerEnter(Number(target.dataset.row), Number(target.dataset.col));
+      }}
     >
       <div
         className="w-full h-full grid rounded-2xl overflow-hidden shadow-inner border-2 border-slate-700/60 dark:border-slate-300/40"
@@ -181,10 +199,17 @@ export const Board: React.FC<BoardProps> = ({
             <button
               key={`${cell.row}-${cell.col}`}
               type="button"
-              aria-label={`Row ${cell.row + 1}, Col ${cell.col + 1}, Region ${reg + 1}`}
+              aria-label={`Row ${cell.row + 1}, Col ${cell.col + 1}, Region ${reg + 1}, ${cell.state}`}
+              disabled={disabled}
+              data-cell="true"
+              data-row={cell.row}
+              data-col={cell.col}
+              data-state={cell.state}
+              data-player={cell.player}
+              onClick={e => { if (e.detail === 0) onCellAction(cell.row, cell.col, 'tap'); }}
               onPointerDown={(e) => handlePointerDown(cell.row, cell.col, e)}
               onPointerEnter={() => handlePointerEnter(cell.row, cell.col)}
-              className={`relative flex items-center justify-center transition-all duration-150 outline-none select-none ${
+              className={`relative flex items-center justify-center transition-all duration-150 focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:z-20 outline-none select-none ${
                 cell.hasConflict && highlightConflicts
                   ? 'bg-rose-400/80 animate-shake ring-2 ring-rose-500 z-10'
                   : ''
@@ -211,7 +236,7 @@ export const Board: React.FC<BoardProps> = ({
               {cell.state === 'cat' && (
                 <div className="w-[84%] h-[84%] animate-pop-in flex items-center justify-center drop-shadow-md">
                   <CatIcon
-                    breed={catBreed}
+                    breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
                     hasConflict={Boolean(cell.hasConflict && highlightConflicts)}
                     expression={cell.hasConflict ? 'shocked' : 'happy'}
                   />

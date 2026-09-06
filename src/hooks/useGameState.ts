@@ -1,576 +1,151 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  BoardCell,
-  CellState,
-  Coordinate,
-  GameMode,
-  InputMode,
-  Move,
-  PlayStyle,
-  Puzzle,
-  UserSettings,
-  GameStats,
-  LevelProgress,
-  DailyProgress,
-  HintResult,
-} from '../engine/types';
-import {
-  findConflicts,
-  getAutoCrossCells,
-  getSatisfiedUnits,
-  generateHint,
-  isValidPlacement,
-} from '../engine/solver';
-import { generateDailyPuzzle, generatePuzzle } from '../engine/generator';
-import { CAMPAIGN_LEVELS, CampaignLevel } from '../data/levels';
-import {
-  loadSettings,
-  saveSettings,
-  loadStats,
-  saveStats,
-  loadCampaignProgress,
-  saveCampaignProgress,
-  loadDailyProgress,
-  saveDailyProgress,
-  DEFAULT_SETTINGS,
-  DEFAULT_STATS,
-} from '../utils/storage';
+import { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
+import type { GameMode, InputMode, Puzzle, UserSettings, HintResult, TwoPlayerConfig } from '../engine/types';
+import { gameReducer, newGame, type CellAction } from '../engine/game';
+import { getSatisfiedUnits, generateHint } from '../engine/solver';
+import { requestPuzzle } from '../engine/generation-client';
+import { CAMPAIGN_LEVELS, type CampaignLevel } from '../data/levels';
+import { loadSettings, saveSettings, loadStats, saveStats, loadCampaignProgress, saveCampaignProgress,
+  loadDailyProgress, saveDailyProgress, loadSavedSession, saveSession, sanitizeSettings, DEFAULT_STATS } from '../utils/storage';
+import { dailyStreaks, localDateKey } from '../utils/dates';
 import { sound } from '../utils/audio';
 
 export function useGameState() {
-  const [settings, setSettings] = useState<UserSettings>(() => loadSettings());
-  const [stats, setStats] = useState<GameStats>(() => loadStats());
-  const [campaignProgress, setCampaignProgress] = useState<Record<string, LevelProgress>>(() =>
-    loadCampaignProgress()
-  );
-  const [dailyProgress, setDailyProgress] = useState<Record<string, DailyProgress>>(() =>
-    loadDailyProgress()
-  );
-
-  // Active game state
-  const [gameMode, setGameMode] = useState<GameMode>('campaign');
-  const [currentLevel, setCurrentLevel] = useState<CampaignLevel>(() => CAMPAIGN_LEVELS[0]);
-  const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle>(() => CAMPAIGN_LEVELS[0]);
-  const [cells, setCells] = useState<BoardCell[]>([]);
+  const [settings, setSettings] = useState(loadSettings);
+  const [rawStats, setStats] = useState(loadStats);
+  const [campaignProgress, setCampaignProgress] = useState(loadCampaignProgress);
+  const [dailyProgress, setDailyProgress] = useState(loadDailyProgress);
+  const [restored] = useState(loadSavedSession);
+  const [game, dispatch] = useReducer(gameReducer, restored, session => session ?? newGame(CAMPAIGN_LEVELS[0], 'campaign'));
   const [inputMode, setInputMode] = useState<InputMode>('mark');
-
-  // Hearts & Lives (Classic mode: 3 hearts)
-  const MAX_HEARTS = 3;
-  const [hearts, setHearts] = useState<number>(MAX_HEARTS);
-
-  // Timer
-  const [timerSeconds, setTimerSeconds] = useState<number>(0);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-
-  // Win & Over
-  const [isWon, setIsWon] = useState<boolean>(false);
-  const [isGameOver, setIsGameOver] = useState<boolean>(false);
-
-  // Undo / Redo history
-  const [history, setHistory] = useState<Move[]>([]);
-  const [redoStack, setRedoStack] = useState<Move[]>([]);
-
-  // Hint
   const [activeHint, setActiveHint] = useState<HintResult | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const pending = useRef<AbortController | null>(null);
+  const played = useRef<string | null>(restored?.sessionId ?? null);
+  const recordedWin = useRef<string | null>(restored?.isWon ? restored.sessionId : null);
+  const currentPuzzle = game.puzzle;
+  const currentLevel = CAMPAIGN_LEVELS.find(level => level.id === currentPuzzle.id) ?? CAMPAIGN_LEVELS[0];
+  const today = localDateKey();
+  const streaks = useMemo(() => dailyStreaks(dailyProgress, today), [dailyProgress, today]);
+  const stats = useMemo(() => ({ ...rawStats, ...streaks }), [rawStats, streaks]);
 
-  // Two-player pass & play tracking
-  const [twoPlayerConfig, setTwoPlayerConfig] = useState<{
-    player1Name: string;
-    player2Name: string;
-    player1Breed: string;
-    player2Breed: string;
-  } | null>(null);
-  const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
+  useEffect(() => { saveSettings(settings); sound.setMuted(!settings.soundEnabled); sound.setVolume(settings.volume);
+    sound.setHapticsEnabled(settings.hapticsEnabled);
+    document.documentElement.classList.toggle('dark', settings.theme === 'midnight');
+  }, [settings]);
+  useEffect(() => { saveStats(stats); }, [stats]);
+  useEffect(() => { saveCampaignProgress(campaignProgress); }, [campaignProgress]);
+  useEffect(() => { saveDailyProgress(dailyProgress); }, [dailyProgress]);
 
-  // Sync sound manager settings
+  // Count attempts when a new session starts, including retries and losses.
   useEffect(() => {
-    sound.setMuted(!settings.soundEnabled);
-    sound.setVolume(settings.volume);
-  }, [settings.soundEnabled, settings.volume]);
+    if (played.current === game.sessionId) return;
+    played.current = game.sessionId;
+    setStats(prev => ({ ...prev, gamesPlayed: prev.gamesPlayed + 1 }));
+  }, [game.sessionId]);
 
-  // Initialize board cells from puzzle
-  const initBoard = useCallback((puzzle: Puzzle) => {
-    const size = puzzle.size;
-    const initialCells: BoardCell[] = [];
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        initialCells.push({
-          row: r,
-          col: c,
-          region: puzzle.regions[r][c],
-          state: 'empty',
-          hasConflict: false,
-          isHinted: false,
-        });
-      }
+  useEffect(() => {
+    if (game.isWon || game.isGameOver || isGenerating) return;
+    const interval = setInterval(() => {
+      if (typeof document === 'undefined' || !document.hidden) dispatch({ type: 'tick' });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [game.isWon, game.isGameOver, isGenerating]);
+
+  // Persist settled state, and flush the latest state when navigating away.
+  const latest = useRef(game);
+  latest.current = game;
+  useEffect(() => {
+    const timer = setTimeout(() => saveSession(game), 150);
+    return () => clearTimeout(timer);
+  }, [game]);
+  useEffect(() => {
+    const flush = () => saveSession(latest.current);
+    window.addEventListener('pagehide', flush);
+    return () => { flush(); window.removeEventListener('pagehide', flush); pending.current?.abort(); };
+  }, []);
+
+  useEffect(() => {
+    if (!game.isWon || recordedWin.current === game.sessionId) return;
+    recordedWin.current = game.sessionId;
+    sound.playVictory();
+    const size = game.puzzle.size, finishTime = game.timerSeconds;
+    setStats(prev => ({ ...prev, gamesWon: prev.gamesWon + 1,
+      bestTimesBySize: { ...prev.bestTimesBySize, [size]: Math.min(prev.bestTimesBySize[size] ?? Infinity, finishTime) } }));
+    if (game.gameMode === 'campaign') {
+      setCampaignProgress(prev => ({ ...prev, [game.puzzle.id]: {
+        levelId: game.puzzle.id, completed: true,
+        bestTimeSeconds: Math.min(prev[game.puzzle.id]?.bestTimeSeconds ?? Infinity, finishTime),
+        stars: Math.max(prev[game.puzzle.id]?.stars ?? 0, game.hearts), completedDate: new Date().toISOString(),
+      } }));
+    } else if (game.gameMode === 'daily' && game.puzzle.dailyDate) {
+      const date = game.puzzle.dailyDate;
+      setDailyProgress(prev => ({ ...prev, [date]: { date, completed: true,
+        timeSeconds: Math.min(prev[date]?.timeSeconds ?? Infinity, finishTime),
+        heartsRemaining: Math.max(prev[date]?.heartsRemaining ?? 0, game.hearts),
+      } }));
     }
-    setCells(initialCells);
-    setHistory([]);
-    setRedoStack([]);
-    setHearts(MAX_HEARTS);
-    setTimerSeconds(0);
-    setIsWon(false);
-    setIsGameOver(false);
+  }, [game]);
+
+  const startGame = useCallback((puzzle: Puzzle, mode: GameMode, config: TwoPlayerConfig | null = null) => {
+    pending.current?.abort(); pending.current = null;
+    setIsGenerating(false); setGenerationError(null); setActiveHint(null);
+    dispatch({ type: 'start', game: newGame(puzzle, mode, config) });
+  }, []);
+  const generate = async (request: { size?: number; date?: string }, mode: GameMode, config: TwoPlayerConfig | null = null) => {
+    pending.current?.abort();
+    const controller = new AbortController(); pending.current = controller;
+    setIsGenerating(true); setGenerationError(null);
+    try {
+      const puzzle = await requestPuzzle(request, controller.signal);
+      if (!controller.signal.aborted && pending.current === controller) startGame(puzzle, mode, config);
+    } catch (error) {
+      if (!controller.signal.aborted && pending.current === controller) setGenerationError(error instanceof Error ? error.message : 'Could not create a map');
+    } finally {
+      if (pending.current === controller) { pending.current = null; setIsGenerating(false); }
+    }
+  };
+  const handleCellAction = (row: number, col: number, action: CellAction) => {
+    if (isGenerating || game.isWon || game.isGameOver) return;
     setActiveHint(null);
-    setIsTimerRunning(true);
-  }, []);
-
-  // Load initial board on mount
-  useEffect(() => {
-    initBoard(currentPuzzle);
-  }, []);
-
-  // Timer interval
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isTimerRunning && !isWon && !isGameOver) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning, isWon, isGameOver]);
-
-  // Check conflicts and win condition whenever cells change
-  useEffect(() => {
-    if (cells.length === 0 || isWon || isGameOver) return;
-
-    const size = currentPuzzle.size;
-    const conflicts = findConflicts(
-      cells,
-      size,
-      currentPuzzle.regions,
-      currentPuzzle.solution
-    );
-
-    // Update conflict visual flags on cells
-    setCells((prev) =>
-      prev.map((cell) => {
-        const key = `${cell.row},${cell.col}`;
-        const hasConflict = conflicts.has(key);
-        if (cell.hasConflict !== hasConflict) {
-          return { ...cell, hasConflict };
-        }
-        return cell;
-      })
-    );
-
-    // Check Win Condition:
-    // 1. Exactly `size` cats
-    // 2. 0 conflicts
-    // 3. Every row, col, and region has exactly 1 cat
-    const catCells = cells.filter((c) => c.state === 'cat');
-    if (catCells.length === size && conflicts.size === 0) {
-      // Validate all units
-      const satisfied = getSatisfiedUnits(cells, size, currentPuzzle.regions);
-      if (
-        satisfied.rows.size === size &&
-        satisfied.cols.size === size &&
-        satisfied.regions.size === size
-      ) {
-        // Victory!
-        setIsWon(true);
-        setIsTimerRunning(false);
-        sound.playVictory();
-
-        // Update progress and stats
-        const finishTime = timerSeconds;
-        setStats((prev) => {
-          const newStats = {
-            ...prev,
-            gamesPlayed: prev.gamesPlayed + 1,
-            gamesWon: prev.gamesWon + 1,
-            bestTimesBySize: {
-              ...prev.bestTimesBySize,
-              [size]: prev.bestTimesBySize[size]
-                ? Math.min(prev.bestTimesBySize[size], finishTime)
-                : finishTime,
-            },
-          };
-          saveStats(newStats);
-          return newStats;
-        });
-
-        if (gameMode === 'campaign' && currentLevel) {
-          setCampaignProgress((prev) => {
-            const existing = prev[currentLevel.id];
-            const bestTime = existing?.bestTimeSeconds
-              ? Math.min(existing.bestTimeSeconds, finishTime)
-              : finishTime;
-            const updated = {
-              ...prev,
-              [currentLevel.id]: {
-                levelId: currentLevel.id,
-                completed: true,
-                bestTimeSeconds: bestTime,
-                stars: hearts === MAX_HEARTS ? 3 : hearts >= 2 ? 2 : 1,
-                completedDate: new Date().toISOString(),
-              },
-            };
-            saveCampaignProgress(updated);
-            return updated;
-          });
-        } else if (gameMode === 'daily') {
-          const today = new Date().toISOString().split('T')[0];
-          setDailyProgress((prev) => {
-            const updated = {
-              ...prev,
-              [today]: {
-                date: today,
-                completed: true,
-                timeSeconds: finishTime,
-                heartsRemaining: hearts,
-              },
-            };
-            saveDailyProgress(updated);
-            return updated;
-          });
-
-          // Daily streak update
-          setStats((prev) => {
-            const newStreak = prev.currentDailyStreak + 1;
-            const newStats = {
-              ...prev,
-              currentDailyStreak: newStreak,
-              maxDailyStreak: Math.max(prev.maxDailyStreak, newStreak),
-            };
-            saveStats(newStats);
-            return newStats;
-          });
-        }
-      }
-    }
-  }, [cells, currentPuzzle, isWon, isGameOver, hearts, gameMode, currentLevel, timerSeconds]);
-
-  // Primary user action on a cell
-  const handleCellAction = (
-    row: number,
-    col: number,
-    actionType: 'tap' | 'doubleTap' | 'cat' | 'mark' | 'drag'
-  ) => {
-    if (isWon || isGameOver) return;
-
-    const currentCell = cells.find((c) => c.row === row && c.col === col);
-    if (!currentCell) return;
-
-    let targetState: CellState = currentCell.state;
-
-    if (actionType === 'drag') {
-      // Dragging only marks unmarked cells as 'mark' ('X')
-      if (currentCell.state === 'empty') {
-        targetState = 'mark';
-      } else {
-        return; // don't change already marked/cat cells while dragging
-      }
-    } else if (actionType === 'doubleTap' || actionType === 'cat') {
-      // Double tap or secondary click = toggle cat
-      targetState = currentCell.state === 'cat' ? 'empty' : 'cat';
-    } else if (actionType === 'mark') {
-      targetState = currentCell.state === 'mark' ? 'empty' : 'mark';
-    } else if (actionType === 'tap') {
-      // Mode-based tap
-      if (inputMode === 'mark') {
-        targetState = currentCell.state === 'mark' ? 'empty' : 'mark';
-      } else {
-        targetState = currentCell.state === 'cat' ? 'empty' : 'cat';
-      }
-    }
-
-    if (targetState === currentCell.state) return;
-
-    // Process state change
-    let autoCrossedList: { row: number; col: number; prevState: CellState }[] = [];
-    let isMistakePlacement = false;
-
-    if (targetState === 'cat') {
-      const existingCats: Coordinate[] = cells
-        .filter((c) => c.state === 'cat' && !(c.row === row && c.col === col))
-        .map((c) => ({ row: c.row, col: c.col }));
-
-      const isValid = isValidPlacement(row, col, existingCats, currentPuzzle.regions);
-      const isSolutionCat =
-        !currentPuzzle.solution ||
-        currentPuzzle.solution.some((s) => s.row === row && s.col === col);
-
-      if (!isValid || !isSolutionCat) {
-        // Rule violation or misplaced cat:
-        // Convert mistake into a RED X so future row/col/region logic is NOT corrupted!
-        isMistakePlacement = true;
-        targetState = 'mark';
-
-        sound.playHeartLost();
-        sound.triggerHaptic('heavy');
-
-        if (settings.playStyle === 'classic') {
-          const nextHearts = hearts - 1;
-          setHearts(nextHearts);
-          if (nextHearts <= 0) {
-            setIsGameOver(true);
-            setIsTimerRunning(false);
-          }
-        }
-      } else {
-        sound.playMeow();
-        sound.triggerHaptic('medium');
-
-        // Auto-Cross helpers if enabled
-        if (settings.autoCross) {
-          const toCross = getAutoCrossCells(
-            row,
-            col,
-            currentPuzzle.size,
-            currentPuzzle.regions,
-            cells
-          );
-          autoCrossedList = toCross.map((coord) => ({
-            row: coord.row,
-            col: coord.col,
-            prevState: 'empty',
-          }));
-        }
-      }
-    } else if (targetState === 'mark') {
-      sound.playPop();
-      sound.triggerHaptic('light');
-    } else {
-      sound.playTap();
-      sound.triggerHaptic('light');
-    }
-
-    // Apply change to board cells
-    setCells((prev) => {
-      const next: BoardCell[] = prev.map((cell) => {
-        if (cell.row === row && cell.col === col) {
-          return {
-            ...cell,
-            state: targetState as CellState,
-            isMistake: isMistakePlacement ? true : (targetState === 'empty' ? false : cell.isMistake),
-            isHinted: false,
-          };
-        }
-        if (autoCrossedList.some((ac) => ac.row === cell.row && ac.col === cell.col)) {
-          return { ...cell, state: 'mark' as CellState, isHinted: false };
-        }
-        return cell;
-      });
-      return next;
-    });
-
-    // Record in history for undo
-    const newMove: Move = {
-      row,
-      col,
-      prevState: currentCell.state,
-      newState: targetState,
-      isMistake: isMistakePlacement,
-      autoCrossed: autoCrossedList.length > 0 ? autoCrossedList : undefined,
-      player: gameMode === 'twoplayer' ? currentPlayer : undefined,
-    };
-
-    setHistory((prev) => [...prev, newMove]);
-    setRedoStack([]);
-
-    // Two-player pass & play alternate turn
-    if (gameMode === 'twoplayer' && targetState === 'cat') {
-      setCurrentPlayer((prev) => (prev === 1 ? 2 : 1));
-    }
+    dispatch({ type: 'move', row, col, action, inputMode, settings });
   };
-
-  // Undo action
-  const handleUndo = () => {
-    if (history.length === 0 || isWon || isGameOver) return;
-
-    const lastMove = history[history.length - 1];
-    setHistory((prev) => prev.slice(0, -1));
-    setRedoStack((prev) => [...prev, lastMove]);
-
-    sound.playTap();
-    sound.triggerHaptic('light');
-
-    setCells((prev) =>
-      prev.map((cell) => {
-        if (cell.row === lastMove.row && cell.col === lastMove.col) {
-          return { ...cell, state: lastMove.prevState, isMistake: false };
-        }
-        if (lastMove.autoCrossed?.some((ac) => ac.row === cell.row && ac.col === cell.col)) {
-          return { ...cell, state: 'empty' };
-        }
-        return cell;
-      })
-    );
-
-    if (gameMode === 'twoplayer' && lastMove.newState === 'cat') {
-      setCurrentPlayer((prev) => (prev === 1 ? 2 : 1));
-    }
-  };
-
-  // Redo action
-  const handleRedo = () => {
-    if (redoStack.length === 0 || isWon || isGameOver) return;
-
-    const moveToRedo = redoStack[redoStack.length - 1];
-    setRedoStack((prev) => prev.slice(0, -1));
-    setHistory((prev) => [...prev, moveToRedo]);
-
-    sound.playTap();
-    sound.triggerHaptic('light');
-
-    setCells((prev) =>
-      prev.map((cell) => {
-        if (cell.row === moveToRedo.row && cell.col === moveToRedo.col) {
-          return { ...cell, state: moveToRedo.newState, isMistake: Boolean(moveToRedo.isMistake) };
-        }
-        if (moveToRedo.autoCrossed?.some((ac) => ac.row === cell.row && ac.col === cell.col)) {
-          return { ...cell, state: 'mark' };
-        }
-        return cell;
-      })
-    );
-  };
-
-  // Hint action
+  const previousGame = useRef(game);
+  useEffect(() => {
+    const previous = previousGame.current; previousGame.current = game;
+    if (previous.sessionId !== game.sessionId || previous.history.length >= game.history.length || game.isWon) return;
+    const move = game.history[game.history.length - 1];
+    if (move?.isMistake) { sound.playHeartLost(); sound.triggerHaptic('heavy'); }
+    else if (move?.newState === 'cat') { sound.playMeow(); sound.triggerHaptic('medium'); }
+    else { sound.playTap(); sound.triggerHaptic('light'); }
+  }, [game]);
   const handleHint = () => {
-    if (isWon || isGameOver) return;
-
-    const hint = generateHint(currentPuzzle, cells);
-    if (!hint) return;
-
-    sound.playHint();
-    sound.triggerHaptic('medium');
-    setActiveHint(hint);
-
-    // Highlight the target cell with golden sparkle glow
-    setCells((prev) =>
-      prev.map((cell) => ({
-        ...cell,
-        isHinted: cell.row === hint.row && cell.col === hint.col,
-      }))
-    );
+    if (isGenerating || game.isWon || game.isGameOver) return;
+    const hint = generateHint(currentPuzzle, game.cells);
+    if (hint) { setActiveHint(hint); dispatch({ type: 'hint', hint }); sound.playHint(); sound.triggerHaptic('medium'); }
   };
-
-  // Reset current puzzle
-  const handleReset = () => {
-    initBoard(currentPuzzle);
-    sound.playTap();
-  };
-
-  // Select a campaign level
-  const handleSelectCampaignLevel = (level: CampaignLevel) => {
-    setGameMode('campaign');
-    setCurrentLevel(level);
-    setCurrentPuzzle(level);
-    initBoard(level);
-  };
-
-  // Next level in campaign
-  const handleNextLevel = () => {
-    if (!currentLevel) return;
-    const nextIdx = CAMPAIGN_LEVELS.findIndex((lvl) => lvl.id === currentLevel.id) + 1;
-    if (nextIdx < CAMPAIGN_LEVELS.length) {
-      handleSelectCampaignLevel(CAMPAIGN_LEVELS[nextIdx]);
-    }
-  };
-
-  // Select a daily puzzle by date
-  const handleSelectDaily = (dateString: string) => {
-    const daily = generateDailyPuzzle(dateString);
-    setGameMode('daily');
-    setCurrentPuzzle(daily);
-    initBoard(daily);
-  };
-
-  // Start a free play puzzle
-  const handleStartFreePlay = (size = 7) => {
-    const puzzle = generatePuzzle(size);
-    if (puzzle) {
-      setGameMode('freeplay');
-      setCurrentPuzzle(puzzle);
-      initBoard(puzzle);
-    }
-  };
-
-  // Start two-player co-op
-  const handleStartTwoPlayer = (config: {
-    player1Name: string;
-    player2Name: string;
-    player1Breed: string;
-    player2Breed: string;
-    gridSize: number;
-  }) => {
-    setTwoPlayerConfig(config);
-    setCurrentPlayer(1);
-    const puzzle = generatePuzzle(config.gridSize) || CAMPAIGN_LEVELS[0];
-    setGameMode('twoplayer');
-    setCurrentPuzzle(puzzle);
-    initBoard(puzzle);
-  };
-
-  // Update settings
-  const handleUpdateSettings = (partial: Partial<UserSettings>) => {
-    setSettings((prev) => {
-      const next = { ...prev, ...partial };
-      saveSettings(next);
-      return next;
-    });
-  };
-
-  // Reset progress
-  const handleResetProgress = () => {
-    setCampaignProgress({});
-    setDailyProgress({});
-    setStats(DEFAULT_STATS);
-    saveCampaignProgress({});
-    saveDailyProgress({});
-    saveStats(DEFAULT_STATS);
-  };
-
-  // Satisfied units computation for dimming
-  const satisfied = getSatisfiedUnits(cells, currentPuzzle.size, currentPuzzle.regions);
-  const placedCatsCount = cells.filter((c) => c.state === 'cat').length;
-  const remainingCats = Math.max(0, currentPuzzle.size - placedCatsCount);
-
+  const satisfied = useMemo(() => getSatisfiedUnits(game.cells, currentPuzzle.size, currentPuzzle.regions), [game.cells, currentPuzzle]);
+  const nextIndex = CAMPAIGN_LEVELS.findIndex(level => level.id === currentPuzzle.id) + 1;
+  const hasNextLevel = game.gameMode === 'campaign' && nextIndex > 0 && nextIndex < CAMPAIGN_LEVELS.length;
   return {
-    settings,
-    stats,
-    campaignProgress,
-    dailyProgress,
-    gameMode,
-    currentLevel,
-    currentPuzzle,
-    cells,
-    inputMode,
-    setInputMode,
-    hearts,
-    maxHearts: MAX_HEARTS,
-    timerSeconds,
-    isWon,
-    isGameOver,
-    history,
-    redoStack,
-    activeHint,
-    twoPlayerConfig,
-    currentPlayer,
-    satisfiedRows: satisfied.rows,
-    satisfiedCols: satisfied.cols,
-    satisfiedRegions: satisfied.regions,
-    remainingCats,
-    handleCellAction,
-    handleUndo,
-    handleRedo,
-    handleHint,
-    handleReset,
-    handleSelectCampaignLevel,
-    handleNextLevel,
-    handleSelectDaily,
-    handleStartFreePlay,
-    handleStartTwoPlayer,
-    handleUpdateSettings,
-    handleResetProgress,
-    hasNextLevel:
-      gameMode === 'campaign' &&
-      currentLevel &&
-      CAMPAIGN_LEVELS.findIndex((lvl) => lvl.id === currentLevel.id) < CAMPAIGN_LEVELS.length - 1,
+    settings, stats, campaignProgress, dailyProgress, ...game, currentPuzzle, currentLevel,
+    inputMode, setInputMode, maxHearts: 3, activeHint, isGenerating, generationError,
+    satisfiedRows: satisfied.rows, satisfiedCols: satisfied.cols, satisfiedRegions: satisfied.regions,
+    remainingCats: Math.max(0, currentPuzzle.size - game.cells.filter(c => c.state === 'cat').length),
+    handleCellAction, handleHint,
+    handleUndo: () => { if (!isGenerating) { setActiveHint(null); dispatch({ type: 'undo' }); } },
+    handleRedo: () => { if (!isGenerating) { setActiveHint(null); dispatch({ type: 'redo' }); } },
+    handleReset: () => startGame(currentPuzzle, game.gameMode, game.twoPlayerConfig),
+    handleSelectCampaignLevel: (level: CampaignLevel) => startGame(level, 'campaign'),
+    handleNextLevel: () => { if (hasNextLevel) startGame(CAMPAIGN_LEVELS[nextIndex], 'campaign'); },
+    handleSelectDaily: (date: string) => generate({ date }, 'daily'),
+    handleStartFreePlay: (size = 7) => generate({ size }, 'freeplay'),
+    handleStartTwoPlayer: (config: TwoPlayerConfig & { gridSize: number }) => generate({ size: config.gridSize }, 'twoplayer', config),
+    handleUpdateSettings: (partial: Partial<UserSettings>) => setSettings(prev => sanitizeSettings({ ...prev, ...partial })),
+    handleResetProgress: () => {
+      setCampaignProgress({}); setDailyProgress({}); setStats({ ...DEFAULT_STATS, bestTimesBySize: {} });
+      startGame(CAMPAIGN_LEVELS[0], 'campaign');
+    },
+    hasNextLevel,
   };
 }

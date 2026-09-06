@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'cat-icon.svg'],
+      includeAssets: ['apple-touch-icon.png', 'cat-icon.svg'],
       manifest: {
         name: 'SchroDoku - Cozy Cat Logic Puzzle',
         short_name: 'SchroDoku',
@@ -16,20 +16,22 @@ export default defineConfig({
         theme_color: '#fdf6ee',
         background_color: '#fdf6ee',
         display: 'standalone',
+        start_url: './',
+        scope: './',
         orientation: 'portrait',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/pwa-512x512.png',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: '/pwa-512x512.png',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

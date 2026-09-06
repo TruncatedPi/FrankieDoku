@@ -13,6 +13,8 @@ export interface Puzzle {
   solution?: Coordinate[];
   name?: string;
   difficulty?: 'easy' | 'medium' | 'hard' | 'expert';
+  generatorVersion?: number;
+  dailyDate?: string;
 }
 
 export interface BoardCell {
@@ -22,6 +24,7 @@ export interface BoardCell {
   state: CellState;
   hasConflict?: boolean;
   isHighlighted?: boolean;
+  player?: 1 | 2;
   isHinted?: boolean;
   isMistake?: boolean;
 }
@@ -34,6 +37,15 @@ export interface Move {
   isMistake?: boolean;
   autoCrossed?: { row: number; col: number; prevState: CellState }[];
   player?: 1 | 2; // For two-player pass-and-play
+  prevPlayer?: 1 | 2;
+  prevMistake?: boolean;
+}
+
+export interface TwoPlayerConfig {
+  player1Name: string;
+  player2Name: string;
+  player1Breed: CatBreed;
+  player2Breed: CatBreed;
 }
 
 export type GameMode = 'campaign' | 'daily' | 'freeplay' | 'twoplayer';

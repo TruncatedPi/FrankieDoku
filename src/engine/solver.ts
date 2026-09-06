@@ -1,4 +1,5 @@
 import { Coordinate, Puzzle, BoardCell, HintResult } from './types';
+import { assertBoardSize, MIN_SIZE, MAX_SIZE } from './constants';
 
 /**
  * Checks if placing a cat at (row, col) is valid given existing placed cats.
@@ -35,48 +36,47 @@ export function solvePuzzle(
   puzzle: Puzzle,
   maxSolutions = 2
 ): Coordinate[][] {
-  const size = puzzle.size;
-  const regions = puzzle.regions;
+  const { size, regions } = puzzle;
+  assertBoardSize(size);
+  if (!Number.isInteger(maxSolutions) || maxSolutions < 1) throw new RangeError('Solution limit must be a positive integer');
   const solutions: Coordinate[][] = [];
-
-  const usedCols = new Array(size).fill(false);
-  const usedRegions = new Array(size).fill(false);
-  const currentQueens: Coordinate[] = [];
-
-  function backtrack(row: number) {
+  const cols = new Array<number>(size).fill(-1);
+  const all = (1 << size) - 1;
+  function search(rows: number, usedCols: number, usedRegions: number) {
     if (solutions.length >= maxSolutions) return;
-
-    if (row === size) {
-      solutions.push([...currentQueens]);
+    if (rows === all) {
+      solutions.push(cols.map((col, row) => ({ row, col })));
       return;
     }
-
-    for (let col = 0; col < size; col++) {
-      if (usedCols[col]) continue;
-
-      const reg = regions[row][col];
-      if (usedRegions[reg]) continue;
-
-      // Check aloof rule with previous row (since we place row by row)
-      if (row > 0) {
-        const prevQueen = currentQueens[row - 1];
-        if (Math.abs(prevQueen.col - col) <= 1) continue;
+    let choices: Coordinate[] | undefined;
+    const byRegion: Coordinate[][] = Array.from({ length: size }, () => []);
+    for (let row = 0; row < size; row++) {
+      if (rows & (1 << row)) continue;
+      const available: Coordinate[] = [];
+      for (let col = 0; col < size; col++) {
+        if ((usedCols & (1 << col)) || (usedRegions & (1 << regions[row][col]))) continue;
+        if (row > 0 && cols[row - 1] >= 0 && Math.abs(cols[row - 1] - col) <= 1) continue;
+        if (row + 1 < size && cols[row + 1] >= 0 && Math.abs(cols[row + 1] - col) <= 1) continue;
+        const q = { row, col };
+        available.push(q);
+        byRegion[regions[row][col]].push(q);
       }
-
-      // Valid placement in row
-      usedCols[col] = true;
-      usedRegions[reg] = true;
-      currentQueens.push({ row, col });
-
-      backtrack(row + 1);
-
-      currentQueens.pop();
-      usedRegions[reg] = false;
-      usedCols[col] = false;
+      if (!available.length) return;
+      if (!choices || available.length < choices.length) choices = available;
+    }
+    for (let reg = 0; reg < size; reg++) {
+      if (usedRegions & (1 << reg)) continue;
+      if (!byRegion[reg].length) return;
+      if (byRegion[reg].length < choices!.length) choices = byRegion[reg];
+    }
+    for (const { row, col } of choices!) {
+      cols[row] = col;
+      search(rows | (1 << row), usedCols | (1 << col), usedRegions | (1 << regions[row][col]));
+      cols[row] = -1;
+      if (solutions.length >= maxSolutions) break;
     }
   }
-
-  backtrack(0);
+  search(0, 0, 0);
   return solutions;
 }
 
@@ -150,27 +150,11 @@ export function getAutoCrossCells(
   currentCells: BoardCell[]
 ): Coordinate[] {
   const targetRegion = regions[placedRow][placedCol];
-  const toCross: Coordinate[] = [];
-
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      if (r === placedRow && c === placedCol) continue;
-
-      const isSameRow = r === placedRow;
-      const isSameCol = c === placedCol;
-      const isSameRegion = regions[r][c] === targetRegion;
-      const isNeighbour = Math.abs(r - placedRow) <= 1 && Math.abs(c - placedCol) <= 1;
-
-      if (isSameRow || isSameCol || isSameRegion || isNeighbour) {
-        const cell = currentCells.find((cItem) => cItem.row === r && cItem.col === c);
-        if (cell && cell.state === 'empty') {
-          toCross.push({ row: r, col: c });
-        }
-      }
-    }
-  }
-
-  return toCross;
+  return currentCells.filter(cell => cell.state === 'empty' &&
+    !(cell.row === placedRow && cell.col === placedCol) &&
+    (cell.row === placedRow || cell.col === placedCol || regions[cell.row][cell.col] === targetRegion ||
+      (Math.abs(cell.row - placedRow) <= 1 && Math.abs(cell.col - placedCol) <= 1)))
+    .map(({ row, col }) => ({ row, col }));
 }
 
 /**
@@ -261,12 +245,21 @@ export function generateHint(
     }
   }
 
+  const placedCats = cells.filter(c => c.state === 'cat');
+  // Explain direct rule eliminations before consulting the stored answer.
+  for (const cell of cells) {
+    if (cell.state !== 'empty') continue;
+    const blocker = placedCats.find(cat => !isValidPlacement(cell.row, cell.col, [cat], regions));
+    if (blocker) return { type: 'elimination', row: cell.row, col: cell.col,
+      explanation: `A cat here would share a row, column, or territory with the cat at Row ${blocker.row + 1}, Column ${blocker.col + 1}, or touch it. Mark this square with an ❌.` };
+  }
+
   // 3. THIRD: Check for forced moves in rows (where row has no cat yet)
   for (let r = 0; r < size; r++) {
     const rowCells = cells.filter((c) => c.row === r);
     const hasCat = rowCells.some((c) => c.state === 'cat');
     if (!hasCat) {
-      const candidates = rowCells.filter((c) => c.state === 'empty');
+      const candidates = rowCells.filter((c) => c.state === 'empty' && isValidPlacement(c.row, c.col, placedCats, regions));
       if (candidates.length === 1 && solutionSet.has(`${candidates[0].row},${candidates[0].col}`)) {
         return {
           type: 'placement',
@@ -319,7 +312,7 @@ export function generateHint(
         type: 'elimination',
         row: cell.row,
         col: cell.col,
-        explanation: `By deduction, no cat can rest here. Mark it with an ❌!`,
+        explanation: `A cat here cannot be part of a complete solution. Mark it with an ❌!`,
       };
     }
   }
@@ -353,19 +346,22 @@ export function generateHint(
  * 4. Solution satisfies all row, col, region, and 8-neighbour isolation constraints
  */
 export function validatePuzzleIntegrity(puzzle: Puzzle): { valid: boolean; error?: string } {
+  if (!puzzle || typeof puzzle !== 'object') {
+    return { valid: false, error: 'Puzzle must be an object' };
+  }
   const size = puzzle.size;
   const regions = puzzle.regions;
 
-  if (size < 4) {
-    return { valid: false, error: `Invalid board size ${size}, minimum is 4` };
+  if (!Number.isInteger(size) || size < MIN_SIZE || size > MAX_SIZE) {
+    return { valid: false, error: `Invalid board size ${size}, expected an integer from ${MIN_SIZE} to ${MAX_SIZE}` };
   }
 
-  if (!regions || regions.length !== size) {
+  if (!Array.isArray(regions) || regions.length !== size) {
     return { valid: false, error: `Region grid height (${regions?.length}) does not match size (${size})` };
   }
 
   for (let r = 0; r < size; r++) {
-    if (!regions[r] || regions[r].length !== size) {
+    if (!Array.isArray(regions[r]) || regions[r].length !== size) {
       return { valid: false, error: `Region row ${r} length does not match size (${size})` };
     }
   }
@@ -375,7 +371,7 @@ export function validatePuzzleIntegrity(puzzle: Puzzle): { valid: boolean; error
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
       const reg = regions[r][c];
-      if (reg < 0 || reg >= size) {
+      if (!Number.isInteger(reg) || reg < 0 || reg >= size) {
         return { valid: false, error: `Cell (${r}, ${c}) has invalid region index ${reg}` };
       }
       regionCells[reg].push({ row: r, col: c });
@@ -393,8 +389,8 @@ export function validatePuzzleIntegrity(puzzle: Puzzle): { valid: boolean; error
     const queue = [cells[0]];
     visited.add(`${cells[0].row},${cells[0].col}`);
 
-    while (queue.length > 0) {
-      const curr = queue.shift()!;
+    for (let head = 0; head < queue.length; head++) {
+      const curr = queue[head];
       for (const d of [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }]) {
         const nr = curr.row + d.dr;
         const nc = curr.col + d.dc;
@@ -414,19 +410,22 @@ export function validatePuzzleIntegrity(puzzle: Puzzle): { valid: boolean; error
   }
 
   // Solve and ensure EXACTLY 1 unique solution (no alternative or contradictory solutions)
-  const solutions = solvePuzzle(puzzle, 3);
+  const solutions = solvePuzzle(puzzle, 2);
   if (solutions.length === 0) {
     return { valid: false, error: `Puzzle has 0 solutions (unsolvable)` };
   }
   if (solutions.length > 1) {
-    return { valid: false, error: `Puzzle has ${solutions.length} solutions (contradictory / non-unique)` };
+    return { valid: false, error: 'Puzzle has at least 2 solutions (contradictory / non-unique)' };
   }
 
   const sol = solutions[0];
-  if (puzzle.solution) {
+  if (puzzle.solution !== undefined) {
+    if (!Array.isArray(puzzle.solution) || puzzle.solution.length !== size) {
+      return { valid: false, error: `Known solution must contain exactly ${size} cats` };
+    }
     const solSet = new Set(sol.map((s) => `${s.row},${s.col}`));
     for (const s of puzzle.solution) {
-      if (!solSet.has(`${s.row},${s.col}`)) {
+      if (!s || !Number.isInteger(s.row) || !Number.isInteger(s.col) || !solSet.delete(`${s.row},${s.col}`)) {
         return { valid: false, error: `Known solution does not match solver output` };
       }
     }

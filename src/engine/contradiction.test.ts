@@ -75,9 +75,10 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
   });
 
   test('Procedural generator produces valid, unique, contradiction-free puzzles across sizes', () => {
-    const testSizes = [4, 5, 6, 7];
+    const testSizes = [4, 5, 6, 7, 8, 9, 10, 11, 12];
     for (const size of testSizes) {
       const puzzle = generatePuzzle(size, 42 + size * 100, 30);
+      assert.ok(puzzle, `Generator must produce a ${size}x${size} puzzle`);
       if (puzzle) {
         const integrity = validatePuzzleIntegrity(puzzle);
         assert.strictEqual(

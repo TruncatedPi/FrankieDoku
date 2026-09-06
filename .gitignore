@@ -4,3 +4,6 @@ dist-ssr
 *.local
 .vscode
 .DS_Store
+/map-validation-report.json
+/test-results/
+/playwright-report/

@@ -12,8 +12,8 @@ A portable, cross-platform, ad-free recreation of the beloved **Meowdoku** (Star
   - **Tier 2: Playful Paws** (Levels 11–25, sizes 6x6 & 7x7)
   - **Tier 3: Clever Whiskers** (Levels 26–40, sizes 8x8 & 9x9)
   - **Tier 4: Grandmaster Feline** (Levels 41–50, size 10x10)
-- **📅 Daily Challenges**: Unique daily puzzle generated for each calendar date with streak tracking and past-date replay.
-- **♾️ Infinite Free Play**: Procedural generator capable of creating unique, verified Star Battle puzzles at any grid size (4x4 to 10x10) on demand in milliseconds!
+- **📅 Daily Challenges**: A deterministic puzzle for each calendar date, with streak tracking and past-date replay.
+- **♾️ Infinite Free Play**: Seeded generator creates verified, unique puzzles from 4x4 through 12x12, with generation in a background worker. Choose a size in Free Play or Co-Op.
 - **👥 Cozy Two-Player / Co-Op**: Play together turn-by-turn with custom player names and favorite cat breeds.
 - **❤️ Classic (3 Hearts) & 🐾 Zen Modes**: Choose between high-stakes deduction or relaxed, stress-free solving.
 - **💡 Smart Assists & Hints**:
@@ -106,3 +106,70 @@ npx cap sync
 npx cap open android
 npx cap open ios
 ```
+
+## Map validation and application review
+
+Run the independent map audit:
+
+```bash
+npm run validate:maps
+```
+
+By default this checks **all 50 campaign maps**, the daily fallback, 31 daily
+dates starting September 1, 2026, and 10 reproducible seeds at **every size 4–12**.
+It checks dimensions, integer region IDs, nonempty connected regions, exactly
+one cat per row/column/region, and no touching cats. It searches independently
+of the game solver, exhausts the search to prove uniqueness, or stops after
+finding a second solution. Any stored solution must be complete and valid.
+Coordinates in reports are zero-based.
+
+```bash
+# Campaign maps plus the fallback only
+npm run validate:maps -- --seeds 0 --days 0
+
+# Broader reproducible generation audit, with detailed JSON results
+npm run validate:maps -- --seeds 100 --seed-start 0 --days 365 --start 2026-09-01 --json map-validation-report.json
+
+# Check a JSON Puzzle object or nonempty array of Puzzle objects
+npm run validate:maps -- --file maps.json --verbose
+
+# Validator regression tests and existing engine tests
+npm test
+```
+
+External maps use `{ "id": "my-map", "size": 4, "regions": [[...], ...] }`,
+with optional `solution: [{ "row": 0, "col": 1 }, ...]`. The stored solution
+is checked as an answer, never used as a clue to limit the search. IDs must be
+nonempty and distinct within each audit.
+
+Exit codes: **0** all maps pass; **1** invalid/ambiguous/unsolvable/missing map or
+inconclusive search; **2** invalid arguments or unreadable input. Search is
+limited to 1,000,000 nodes per map (`--max-nodes`); hitting the limit fails with
+uniqueness **unknown**. It does not silently accept partial search results.
+Generated maps use the application's existing bounded generation attempts;
+the node budget applies to independent validation, not generation.
+
+The repaired generator passes the extended audit: **1,316/1,316** cases,
+including 900 seeds through 12x12 and a year of daily maps. No dates use the old
+fallback. The legacy fallback remains in the audit to validate old maps.
+
+Browser checks exercise keyboard and touch input, session restoration, co-op,
+daily progress, cross-engine seeded generation, and offline play under a GitHub
+Pages project subpath:
+
+```bash
+npx playwright install chromium firefox webkit
+npm run test:e2e
+```
+
+The deployment workflow runs unit tests, the extended map audit, a production
+build, and browser tests before publishing. See [the application review](docs/application-review.md)
+for the fixes and validation details.
+
+Finite seed/date sampling cannot prove correctness for every future generated
+map; the checker proves uniqueness for each actual grid it successfully audits.
+
+GitHub Pages deployment is conditional on an enabled Pages site. The current
+GitHub plan does not support Pages for this private repository, so Actions
+runs every test and uploads the validated production build while explicitly
+skipping deployment. Enabling Pages later automatically enables deployment.

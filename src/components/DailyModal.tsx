@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Calendar, Flame, CheckCircle2, Play, Clock } from 'lucide-react';
 import { DailyProgress, GameStats } from '../engine/types';
+import { localDateKey } from '../utils/dates';
 
 interface DailyModalProps {
   isOpen: boolean;
@@ -19,14 +20,14 @@ export const DailyModal: React.FC<DailyModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateKey();
 
   // Get past 7 days
   const pastDays: { dateStr: string; dayName: string; dayNum: number }[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = localDateKey(d);
     const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
     const dayNum = d.getDate();
     pastDays.push({ dateStr, dayName, dayNum });

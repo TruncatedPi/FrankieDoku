@@ -7,6 +7,9 @@ class SoundManager {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
   private volume: number = 0.5;
+  private hapticsEnabled = true;
+
+  public setHapticsEnabled(enabled: boolean) { this.hapticsEnabled = enabled; }
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -240,6 +243,7 @@ class SoundManager {
    * Haptic vibration feedback for mobile devices.
    */
   public triggerHaptic(type: 'light' | 'medium' | 'heavy' = 'light') {
+    if (!this.hapticsEnabled) return;
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         if (type === 'light') navigator.vibrate(10);

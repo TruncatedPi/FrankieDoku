@@ -12,6 +12,7 @@ import { InstallGuideModal } from './components/InstallGuideModal';
 import { CatBreed } from './engine/types';
 import { Sparkles, RotateCcw, HeartOff, Users } from 'lucide-react';
 import { CatIcon } from './components/CatIcon';
+import { FreePlayModal } from './components/FreePlayModal';
 
 export function App() {
   const {
@@ -52,6 +53,8 @@ export function App() {
     handleUpdateSettings,
     handleResetProgress,
     hasNextLevel,
+    isGenerating,
+    generationError,
   } = useGameState();
 
   // Modals visibility state
@@ -60,6 +63,7 @@ export function App() {
   const [isTwoPlayerOpen, setIsTwoPlayerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
+  const [isFreePlayOpen, setIsFreePlayOpen] = useState(false);
 
   // Determine current active cat breed (supports two-player custom breeds)
   const activeBreed: CatBreed =
@@ -86,11 +90,13 @@ export function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenInstall={() => setIsInstallOpen(true)}
         onOpenTwoPlayer={() => setIsTwoPlayerOpen(true)}
-        onNewFreePlay={() => handleStartFreePlay(currentPuzzle.size)}
+        onNewFreePlay={() => setIsFreePlayOpen(true)}
       />
 
       {/* Main Game Area */}
       <main className="flex-1 flex flex-col items-center justify-center px-3 py-1 gap-2">
+        {isGenerating && <p role="status" className="text-sm font-bold text-amber-700">Creating your map…</p>}
+        {generationError && <p role="alert" className="text-sm text-rose-700">{generationError} Choose a board size or daily date to retry.</p>}
         {/* Two Player Active Turn Banner */}
         {gameMode === 'twoplayer' && twoPlayerConfig && (
           <div className="w-full max-w-[min(92vw,480px)] p-2 rounded-2xl bg-amber-500/10 dark:bg-white/5 border border-amber-400/40 flex items-center justify-between animate-pop-in">
@@ -134,6 +140,8 @@ export function App() {
           satisfiedCols={satisfiedCols}
           satisfiedRegions={satisfiedRegions}
           onCellAction={handleCellAction}
+          disabled={isGenerating || isWon || isGameOver}
+          playerBreeds={twoPlayerConfig ? { 1: twoPlayerConfig.player1Breed, 2: twoPlayerConfig.player2Breed } : undefined}
         />
 
         {/* Player Controls */}
@@ -210,6 +218,7 @@ export function App() {
       />
 
       {/* Level Select Modal */}
+      {isFreePlayOpen && <FreePlayModal initialSize={currentPuzzle.size} onClose={() => setIsFreePlayOpen(false)} onStart={handleStartFreePlay} />}
       <LevelSelectModal
         isOpen={isLevelsOpen}
         onClose={() => setIsLevelsOpen(false)}

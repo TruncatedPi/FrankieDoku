@@ -102,6 +102,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Sound & Haptics */}
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 space-y-3">
+            <label className="flex items-center justify-between">
+              <span>Haptic Feedback</span>
+              <input type="checkbox" checked={settings.hapticsEnabled} onChange={e => onUpdateSettings({ hapticsEnabled: e.target.checked })} />
+            </label>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
                 {settings.soundEnabled ? (
@@ -114,6 +118,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <input
                 type="checkbox"
                 checked={settings.soundEnabled}
+                aria-label="Sound Effects"
                 onChange={(e) => onUpdateSettings({ soundEnabled: e.target.checked })}
                 className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
               />
@@ -124,6 +129,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span className="text-slate-400">Volume</span>
                 <input
                   type="range"
+                  aria-label="Volume"
                   min="0.1"
                   max="1.0"
                   step="0.05"

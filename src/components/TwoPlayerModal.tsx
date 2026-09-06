@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Users, Heart, Play } from 'lucide-react';
 import { CatBreed } from '../engine/types';
 import { CatIcon } from './CatIcon';
+import { BOARD_SIZES } from '../engine/constants';
 
 interface TwoPlayerModalProps {
   isOpen: boolean;
@@ -89,6 +90,8 @@ export const TwoPlayerModal: React.FC<TwoPlayerModalProps> = ({
               onChange={(e) => setP1Name(e.target.value)}
               className="w-full text-center text-xs font-bold py-1 px-2 rounded-lg bg-white dark:bg-white/10 border border-amber-200 dark:border-white/10 text-slate-800 dark:text-slate-100"
               placeholder="Player 1"
+              maxLength={100}
+              aria-label="Player 1 name"
             />
             <select
               value={p1Breed}
@@ -114,6 +117,8 @@ export const TwoPlayerModal: React.FC<TwoPlayerModalProps> = ({
               onChange={(e) => setP2Name(e.target.value)}
               className="w-full text-center text-xs font-bold py-1 px-2 rounded-lg bg-white dark:bg-white/10 border border-rose-200 dark:border-white/10 text-slate-800 dark:text-slate-100"
               placeholder="Player 2"
+              maxLength={100}
+              aria-label="Player 2 name"
             />
             <select
               value={p2Breed}
@@ -135,7 +140,7 @@ export const TwoPlayerModal: React.FC<TwoPlayerModalProps> = ({
             Select Board Size
           </label>
           <div className="grid grid-cols-4 gap-1.5">
-            {[6, 7, 8, 9].map((size) => (
+            {BOARD_SIZES.map((size) => (
               <button
                 key={size}
                 type="button"
