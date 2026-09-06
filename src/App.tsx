@@ -92,6 +92,7 @@ export function App() {
         onOpenInstall={() => setIsInstallOpen(true)}
         onOpenTwoPlayer={() => setIsTwoPlayerOpen(true)}
         onNewFreePlay={() => setIsFreePlayOpen(true)}
+        catBreed={activeBreed}
       />
 
       {/* Main Game Area */}

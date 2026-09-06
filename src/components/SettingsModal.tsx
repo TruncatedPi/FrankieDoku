@@ -13,6 +13,7 @@ interface SettingsModalProps {
 }
 
 const BREEDS: { id: CatBreed; name: string; desc: string }[] = [
+  { id: 'frankie', name: 'Frankie (Best Dog)', desc: 'Fluffy, happy Sheltie 🐶' },
   { id: 'orange_tabby', name: 'Ginger Tabby', desc: 'Warm & adventurous' },
   { id: 'calico', name: 'Calico', desc: 'Lucky & charming' },
   { id: 'tuxedo', name: 'Tuxedo', desc: 'Dapper & sharp' },
@@ -22,11 +23,11 @@ const BREEDS: { id: CatBreed; name: string; desc: string }[] = [
 ];
 
 const THEMES: { id: ThemePalette; name: string; colors: string[] }[] = [
-  { id: 'cozy', name: 'Cozy Warm', colors: ['#ffe5d9', '#d8e2dc', '#ffcad4', '#f4acb7'] },
-  { id: 'pastel', name: 'Sweet Pastel', colors: ['#ffb3ba', '#ffdfba', '#ffffba', '#baffc9'] },
-  { id: 'matcha', name: 'Matcha Tea', colors: ['#e9edc9', '#ccd5ae', '#faedcd', '#d4a373'] },
-  { id: 'lavender', name: 'Lavender Dream', colors: ['#f3e8ff', '#e9d5ff', '#d8b4fe', '#fce7f3'] },
-  { id: 'midnight', name: 'Twilight Night', colors: ['#334155', '#3b82f6', '#8b5cf6', '#ec4899'] },
+  { id: 'cozy', name: 'Cozy Warm', colors: ['#f87171', '#38bdf8', '#4ade80', '#fbbf24'] },
+  { id: 'pastel', name: 'Sweet Pastel', colors: ['#ff99c8', '#7ee8fa', '#ffd670', '#c77dff'] },
+  { id: 'matcha', name: 'Matcha Nature', colors: ['#6a994e', '#f4a261', '#5bc0be', '#ffd166'] },
+  { id: 'lavender', name: 'Lavender Dream', colors: ['#c084fc', '#67e8f9', '#f472b6', '#fde047'] },
+  { id: 'midnight', name: 'Twilight Neon', colors: ['#1e3a8a', '#065f46', '#701a75', '#7c2d12'] },
 ];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -142,38 +143,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
           </div>
 
+          {/* Cat Placement Behavior: Auto-Place X's vs Traditional */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-white/5 border border-amber-200/60 dark:border-white/10 space-y-2">
+            <div>
+              <span className="font-bold text-slate-800 dark:text-slate-100 block text-sm">
+                Pet Placement Rule
+              </span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                Choose how X marks are handled when placing a pet
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onUpdateSettings({ autoCross: true })}
+                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                  settings.autoCross
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                    : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-amber-300'
+                }`}
+              >
+                <span className="font-bold text-xs flex items-center gap-1">
+                  ⚡ Auto-Place X's
+                </span>
+                <span className={`text-[10px] leading-tight ${settings.autoCross ? 'text-amber-100' : 'text-slate-400'}`}>
+                  Assisted: Auto-marks X in row, column, region & surrounding cells
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onUpdateSettings({ autoCross: false })}
+                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                  !settings.autoCross
+                    ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                    : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-amber-300'
+                }`}
+              >
+                <span className="font-bold text-xs flex items-center gap-1">
+                  🎯 Place No X's
+                </span>
+                <span className={`text-[10px] leading-tight ${!settings.autoCross ? 'text-amber-100' : 'text-slate-400'}`}>
+                  Traditional: Place pets only; you manually mark all X's
+                </span>
+              </button>
+            </div>
+          </div>
+
           {/* Smart Assists */}
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 space-y-2.5">
             <span className="font-bold text-slate-800 dark:text-slate-100 block">
               Smart Helpers
             </span>
 
-            {/* Auto-Cross */}
-            <label className="flex items-center justify-between cursor-pointer">
-              <div>
-                <span className="font-medium text-slate-700 dark:text-slate-200 block">
-                  Auto-Cross on Cat Place
-                </span>
-                <span className="text-[10px] text-slate-400 block">
-                  Automatically marks 'X' in row, column, region, and 8 neighbors
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.autoCross}
-                onChange={(e) => onUpdateSettings({ autoCross: e.target.checked })}
-                className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400"
-              />
-            </label>
-
             {/* Highlight Conflicts */}
-            <label className="flex items-center justify-between cursor-pointer pt-1 border-t border-slate-200/40 dark:border-white/5">
+            <label className="flex items-center justify-between cursor-pointer">
               <div>
                 <span className="font-medium text-slate-700 dark:text-slate-200 block">
                   Highlight Conflicts
                 </span>
                 <span className="text-[10px] text-slate-400 block">
-                  Show red warning when cats break rules
+                  Show red warning when pets break rules
                 </span>
               </div>
               <input
@@ -191,7 +221,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   Dim Completed Territories
                 </span>
                 <span className="text-[10px] text-slate-400 block">
-                  Subtly dims rows, cols, and regions that have their cat
+                  Subtly dims rows, cols, and regions that have their pet
                 </span>
               </div>
               <input
@@ -203,10 +233,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </label>
           </div>
 
-          {/* Cat Breed Customization */}
+          {/* Cat/Pet Breed Customization */}
           <div className="space-y-2">
             <span className="font-bold text-slate-800 dark:text-slate-100 block text-sm">
-              Choose Your Cat
+              Choose Your Pet
             </span>
             <div className="grid grid-cols-3 gap-2">
               {BREEDS.map((breed) => (

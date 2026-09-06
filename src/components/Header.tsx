@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameMode, PlayStyle } from '../engine/types';
+import { GameMode, PlayStyle, CatBreed } from '../engine/types';
 import { Volume2, VolumeX, Settings, Heart, Calendar, Grid, Download, Users, RefreshCw } from 'lucide-react';
 import { CatIcon } from './CatIcon';
 import { APP_VERSION } from '../utils/version';
@@ -21,6 +21,7 @@ interface HeaderProps {
   onOpenInstall: () => void;
   onOpenTwoPlayer: () => void;
   onNewFreePlay: () => void;
+  catBreed?: CatBreed;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -40,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenInstall,
   onOpenTwoPlayer,
   onNewFreePlay,
+  catBreed,
 }) => {
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -68,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-2xl bg-amber-100 dark:bg-amber-900/40 p-1 shadow-sm border border-amber-300/40 flex items-center justify-center">
-            <CatIcon breed="orange_tabby" expression="happy" />
+            <CatIcon breed={catBreed || 'frankie'} expression="happy" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 leading-none mb-0.5">

@@ -11,10 +11,10 @@ const STATS_KEY = 'meowdoku_stats_v1';
 const SAVED_GAME_KEY = 'meowdoku_saved_session_v2';
 export const DEFAULT_SETTINGS: UserSettings = {
   soundEnabled: true, hapticsEnabled: true, volume: 0.6, playStyle: 'classic',
-  autoCross: true, highlightConflicts: true, dimCompleted: true, catBreed: 'orange_tabby', theme: 'cozy',
+  autoCross: true, highlightConflicts: true, dimCompleted: true, catBreed: 'frankie', theme: 'cozy',
 };
 export const DEFAULT_STATS: GameStats = { gamesPlayed: 0, gamesWon: 0, currentDailyStreak: 0, maxDailyStreak: 0, bestTimesBySize: {} };
-const breeds = ['orange_tabby', 'calico', 'tuxedo', 'siamese', 'black_cat', 'gray_fluff'];
+const breeds = ['frankie', 'orange_tabby', 'calico', 'tuxedo', 'siamese', 'black_cat', 'gray_fluff'];
 const themes = ['cozy', 'pastel', 'matcha', 'lavender', 'midnight'];
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const count = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;

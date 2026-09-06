@@ -17,6 +17,7 @@ interface TwoPlayerModalProps {
 }
 
 const BREEDS: { id: CatBreed; label: string }[] = [
+  { id: 'frankie', label: 'Frankie (Best Dog)' },
   { id: 'orange_tabby', label: 'Ginger Tabby' },
   { id: 'calico', label: 'Sweet Calico' },
   { id: 'tuxedo', label: 'Tuxedo' },
@@ -32,7 +33,7 @@ export const TwoPlayerModal: React.FC<TwoPlayerModalProps> = ({
 }) => {
   const [p1Name, setP1Name] = useState('Player 1');
   const [p2Name, setP2Name] = useState('Player 2');
-  const [p1Breed, setP1Breed] = useState<CatBreed>('orange_tabby');
+  const [p1Breed, setP1Breed] = useState<CatBreed>('frankie');
   const [p2Breed, setP2Breed] = useState<CatBreed>('calico');
   const [gridSize, setGridSize] = useState(7);
 

@@ -59,7 +59,7 @@ export const Controls: React.FC<ControlsProps> = ({
           <div className="w-6 h-6 flex items-center justify-center">
             <CatIcon breed={catBreed} expression="happy" />
           </div>
-          <span>Place Cat ({remainingCats} left)</span>
+          <span>Place {catBreed === 'frankie' ? 'Frankie' : 'Cat'} ({remainingCats} left)</span>
         </button>
       </div>
 

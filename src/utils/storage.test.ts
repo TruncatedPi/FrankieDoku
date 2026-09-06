@@ -20,10 +20,11 @@ test('malformed JSON and wrong-shaped settings/progress recover without crashing
     assert.deepEqual(loadDailyProgress(), {});
     assert.equal(loadStats().gamesPlayed, 0);
   }
-  data.set('meowdoku_settings_v1', JSON.stringify({ soundEnabled: 'false', theme: 'bad', volume: 5, autoCross: false }));
+  data.set('meowdoku_settings_v1', JSON.stringify({ soundEnabled: 'false', theme: 'bad', volume: 5, autoCross: false, catBreed: 'frankie' }));
   assert.equal(loadSettings().soundEnabled, true);
   assert.equal(loadSettings().volume, 1);
   assert.equal(loadSettings().autoCross, false);
+  assert.equal(loadSettings().catBreed, 'frankie');
   data.set('meowdoku_campaign_v1', JSON.stringify({ 'level-1': null }));
   assert.deepEqual(loadCampaignProgress(), {});
 });

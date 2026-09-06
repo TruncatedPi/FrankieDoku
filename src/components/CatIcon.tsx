@@ -1,5 +1,7 @@
 import React from 'react';
 import { CatBreed } from '../engine/types';
+import frankieImg from '../assets/frankie.png';
+import frankieShockedImg from '../assets/frankie-shocked.png';
 
 interface CatIconProps {
   breed?: CatBreed;
@@ -9,11 +11,36 @@ interface CatIconProps {
 }
 
 export const CatIcon: React.FC<CatIconProps> = ({
-  breed = 'orange_tabby',
+  breed = 'frankie',
   expression = 'happy',
   className = 'w-full h-full',
   hasConflict = false,
 }) => {
+  if (breed === 'frankie') {
+    const isShocked = hasConflict || expression === 'shocked';
+    return (
+      <div
+        className={`relative ${className} flex items-center justify-center select-none pointer-events-none transition-transform duration-200 ${
+          hasConflict ? 'animate-wiggle' : ''
+        }`}
+      >
+        <img
+          src={isShocked ? frankieShockedImg : frankieImg}
+          alt={isShocked ? 'Frankie shocked' : 'Frankie happy'}
+          className={`w-full h-full object-contain rounded-full drop-shadow-md ${
+            isShocked ? 'ring-2 ring-rose-500 shadow-rose-400/50' : ''
+          }`}
+          draggable={false}
+        />
+        {isShocked && (
+          <div className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold shadow-sm">
+            !
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // Breed styling palettes
   const getBreedColors = () => {
     switch (breed) {
