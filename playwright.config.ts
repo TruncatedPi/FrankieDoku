@@ -15,7 +15,7 @@ export default defineConfig({
     { name: 'mobile-chromium', testMatch: 'mobile.spec.ts', use: { ...devices['Pixel 7'] } },
   ],
   webServer: [
-    { command: process.env.CI ? 'node scripts/serve-built.mjs' : 'npm run build && node scripts/serve-built.mjs', url: 'http://127.0.0.1:4173/SchroDoku/', timeout: 120_000, reuseExistingServer: false },
-    { command: 'npm run dev -- --host 127.0.0.1 --port 3173 --strictPort', url: 'http://127.0.0.1:3173', reuseExistingServer: false },
+    { command: process.env.CI ? 'node scripts/serve-built.mjs' : 'npm run build && node scripts/serve-built.mjs', url: 'http://127.0.0.1:4173/SchroDoku/', timeout: 120_000, reuseExistingServer: true },
+    { command: 'npm run dev -- --host 127.0.0.1 --port 3173 --strictPort', url: 'http://127.0.0.1:3173', reuseExistingServer: true },
   ],
 });

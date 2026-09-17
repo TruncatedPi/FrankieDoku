@@ -24,3 +24,47 @@ test('12x12 board fits a phone and responds to touch', async ({ page }) => {
   await expect(cell).toHaveAttribute('data-state', 'mark');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test('touch tap toggles mark on and off reliably on mobile', async ({ page }) => {
+  await page.goto('./');
+  const cell = page.locator('[data-row="0"][data-col="0"]');
+  // First tap sets X
+  await cell.tap();
+  await expect(cell).toHaveAttribute('data-state', 'mark');
+  // Second tap removes X
+  await page.waitForTimeout(350);
+  await cell.tap();
+  await expect(cell).toHaveAttribute('data-state', 'empty');
+});
+
+test('touch with micro-movement toggles mark on and off', async ({ page }) => {
+  await page.goto('./');
+  const cell = page.locator('[data-row="1"][data-col="1"]');
+  const box = (await cell.boundingBox())!;
+  const cdp = await page.context().newCDPSession(page);
+
+  // Tap 1 with micro-jitter
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }],
+  });
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [{ x: box.x + box.width / 2 + 1, y: box.y + box.height / 2 + 1 }],
+  });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(cell).toHaveAttribute('data-state', 'mark');
+
+  // Tap 2 on the same cell with micro-jitter to remove the mark
+  await page.waitForTimeout(350);
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: box.x + box.width / 2, y: box.y + box.height / 2 }],
+  });
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [{ x: box.x + box.width / 2 + 1, y: box.y + box.height / 2 + 1 }],
+  });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(cell).toHaveAttribute('data-state', 'empty');
+});

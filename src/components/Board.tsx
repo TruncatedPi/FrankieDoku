@@ -124,8 +124,16 @@ export const Board: React.FC<BoardProps> = ({
   }, [activeHint]);
 
   const isDragging = useRef(false);
-  const lastTappedRef = useRef<{ row: number; col: number; time: number; wasCat: boolean } | null>(null);
-  useEffect(() => { lastTappedRef.current = null; isDragging.current = false; }, [puzzle, inputMode]);
+  const dragStartCellRef = useRef<{ row: number; col: number } | null>(null);
+  const lastHoveredCellRef = useRef<{ row: number; col: number } | null>(null);
+  const lastTappedRef = useRef<{ row: number; col: number; time: number; wasEmpty: boolean; wasCat: boolean } | null>(null);
+
+  useEffect(() => {
+    lastTappedRef.current = null;
+    isDragging.current = false;
+    dragStartCellRef.current = null;
+    lastHoveredCellRef.current = null;
+  }, [puzzle, inputMode]);
 
   const handlePointerDown = (row: number, col: number, e: React.PointerEvent) => {
     if (disabled || !e.isPrimary) return;
@@ -137,29 +145,52 @@ export const Board: React.FC<BoardProps> = ({
     }
 
     isDragging.current = true;
+    dragStartCellRef.current = { row, col };
+    lastHoveredCellRef.current = { row, col };
 
-    // Detect double-tap timing (under 300ms on same cell)
+    const cellState = cells[row * size + col]?.state;
     const now = Date.now();
     const last = lastTappedRef.current;
-    if (last && last.row === row && last.col === col && now - last.time < 320) {
+
+    // Detect double-tap timing (under 320ms on same empty cell to place a cat)
+    if (last && last.wasEmpty && last.row === row && last.col === col && now - last.time < 320) {
       lastTappedRef.current = null;
-      if (inputMode === 'mark') onCellAction(row, col, last.wasCat ? 'mark' : 'doubleTap');
-      return;
+      if (inputMode === 'mark') {
+        onCellAction(row, col, 'doubleTap');
+        return;
+      }
     }
 
-    lastTappedRef.current = { row, col, time: now, wasCat: cells[row * size + col]?.state === 'cat' };
+    lastTappedRef.current = {
+      row,
+      col,
+      time: now,
+      wasEmpty: cellState === 'empty',
+      wasCat: cellState === 'cat',
+    };
     onCellAction(row, col, 'tap');
   };
 
   const handlePointerEnter = (row: number, col: number) => {
-    if (!disabled && isDragging.current && inputMode === 'mark') {
-      onCellAction(row, col, 'drag');
+    if (disabled || !isDragging.current || inputMode !== 'mark') return;
+    // Never trigger drag on the cell where pointerdown initiated the gesture
+    if (dragStartCellRef.current && dragStartCellRef.current.row === row && dragStartCellRef.current.col === col) {
+      return;
     }
+    // Never re-trigger repeatedly on the cell we are already hovering over
+    if (lastHoveredCellRef.current && lastHoveredCellRef.current.row === row && lastHoveredCellRef.current.col === col) {
+      return;
+    }
+
+    lastHoveredCellRef.current = { row, col };
+    onCellAction(row, col, 'drag');
   };
 
   useEffect(() => {
     const handlePointerUp = () => {
       isDragging.current = false;
+      dragStartCellRef.current = null;
+      lastHoveredCellRef.current = null;
     };
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
@@ -179,7 +210,9 @@ export const Board: React.FC<BoardProps> = ({
       onPointerMove={e => {
         if (e.pointerType !== 'touch' || !isDragging.current || disabled) return;
         const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLButtonElement>('[data-cell]');
-        if (target && e.currentTarget.contains(target)) handlePointerEnter(Number(target.dataset.row), Number(target.dataset.col));
+        if (target && e.currentTarget.contains(target)) {
+          handlePointerEnter(Number(target.dataset.row), Number(target.dataset.col));
+        }
       }}
     >
       <div
