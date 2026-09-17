@@ -212,6 +212,348 @@ function describeCatConflict(a: Coordinate, b: Coordinate, regions: number[][]):
  * Explains HOW a cell causes a contradiction or constraint issue,
  * returns involved cells with faded state and highlighting.
  */
+function cellName(row: number, col: number): string {
+  return `Row ${row + 1}, Column ${col + 1}`;
+}
+
+/**
+ * Searches for Pointing and Claiming reductions between Lines and Territories.
+ */
+function findLineRegionReduction(
+  size: number,
+  regions: number[][],
+  cells: BoardCell[],
+  placedCats: Coordinate[]
+): HintResult | null {
+  const validCells = cells.filter(
+    (c) => c.state === 'empty' && isValidPlacement(c.row, c.col, placedCats, regions)
+  );
+
+  // 1. Pointing: In Territory reg, all remaining valid cells lie within a single row or column
+  for (let reg = 0; reg < size; reg++) {
+    if (placedCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+    const regValid = validCells.filter((c) => regions[c.row][c.col] === reg);
+    if (regValid.length === 0) continue;
+
+    const firstRow = regValid[0].row;
+    if (regValid.every((c) => c.row === firstRow)) {
+      const target = validCells.find((c) => c.row === firstRow && regions[c.row][c.col] !== reg);
+      if (target) {
+        return {
+          type: 'elimination',
+          row: target.row,
+          col: target.col,
+          explanation: `All open squares for Territory ${reg + 1} lie in Row ${firstRow + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
+          steps: [
+            `In Territory ${reg + 1}, all remaining open squares lie exclusively in Row ${firstRow + 1}.`,
+            `Because Territory ${reg + 1} must contain a cat, that cat must be placed in Row ${firstRow + 1}.`,
+            `Therefore, no other square in Row ${firstRow + 1} outside Territory ${reg + 1} can contain a cat.`,
+            `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
+          ],
+          involvedCells: [
+            { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+            ...regValid.map((c) => ({ row: c.row, col: c.col, highlight: true, reason: 'caused_by' as const })),
+          ],
+        };
+      }
+    }
+
+    const firstCol = regValid[0].col;
+    if (regValid.every((c) => c.col === firstCol)) {
+      const target = validCells.find((c) => c.col === firstCol && regions[c.row][c.col] !== reg);
+      if (target) {
+        return {
+          type: 'elimination',
+          row: target.row,
+          col: target.col,
+          explanation: `All open squares for Territory ${reg + 1} lie in Column ${firstCol + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
+          steps: [
+            `In Territory ${reg + 1}, all remaining open squares lie exclusively in Column ${firstCol + 1}.`,
+            `Because Territory ${reg + 1} must contain a cat, that cat must be placed in Column ${firstCol + 1}.`,
+            `Therefore, no other square in Column ${firstCol + 1} outside Territory ${reg + 1} can contain a cat.`,
+            `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
+          ],
+          involvedCells: [
+            { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+            ...regValid.map((c) => ({ row: c.row, col: c.col, highlight: true, reason: 'caused_by' as const })),
+          ],
+        };
+      }
+    }
+  }
+
+  // 2. Claiming: In Row r or Column c, all remaining valid cells lie within a single Territory
+  for (let r = 0; r < size; r++) {
+    if (placedCats.some((cat) => cat.row === r)) continue;
+    const rowValid = validCells.filter((c) => c.row === r);
+    if (rowValid.length === 0) continue;
+
+    const firstReg = regions[r][rowValid[0].col];
+    if (rowValid.every((c) => regions[r][c.col] === firstReg)) {
+      const target = validCells.find((c) => regions[c.row][c.col] === firstReg && c.row !== r);
+      if (target) {
+        return {
+          type: 'elimination',
+          row: target.row,
+          col: target.col,
+          explanation: `All open squares in Row ${r + 1} lie in Territory ${firstReg + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
+          steps: [
+            `In Row ${r + 1}, all remaining open squares lie exclusively within Territory ${firstReg + 1}.`,
+            `Because Row ${r + 1} must contain a cat, that cat will be located in Territory ${firstReg + 1}.`,
+            `Therefore, no other square in Territory ${firstReg + 1} outside Row ${r + 1} can contain a cat.`,
+            `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
+          ],
+          involvedCells: [
+            { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+            ...rowValid.map((c) => ({ row: c.row, col: c.col, highlight: true, reason: 'caused_by' as const })),
+          ],
+        };
+      }
+    }
+  }
+
+  for (let c = 0; c < size; c++) {
+    if (placedCats.some((cat) => cat.col === c)) continue;
+    const colValid = validCells.filter((item) => item.col === c);
+    if (colValid.length === 0) continue;
+
+    const firstReg = regions[colValid[0].row][c];
+    if (colValid.every((item) => regions[item.row][c] === firstReg)) {
+      const target = validCells.find((item) => regions[item.row][item.col] === firstReg && item.col !== c);
+      if (target) {
+        return {
+          type: 'elimination',
+          row: target.row,
+          col: target.col,
+          explanation: `All open squares in Column ${c + 1} lie in Territory ${firstReg + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
+          steps: [
+            `In Column ${c + 1}, all remaining open squares lie exclusively within Territory ${firstReg + 1}.`,
+            `Because Column ${c + 1} must contain a cat, that cat will be located in Territory ${firstReg + 1}.`,
+            `Therefore, no other square in Territory ${firstReg + 1} outside Column ${c + 1} can contain a cat.`,
+            `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
+          ],
+          involvedCells: [
+            { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+            ...colValid.map((item) => ({ row: item.row, col: item.col, highlight: true, reason: 'caused_by' as const })),
+          ],
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Lookahead contradiction deduction:
+ * Tests placing a hypothetical cat at each non-solution empty cell.
+ * Searches for 1-step unit starvation and multi-step forcing chains.
+ */
+function findLookaheadContradiction(
+  size: number,
+  regions: number[][],
+  cells: BoardCell[],
+  placedCats: Coordinate[],
+  solutionSet: Set<string>
+): HintResult | null {
+  const emptyNonSol = cells.filter((c) => c.state === 'empty' && !solutionSet.has(`${c.row},${c.col}`));
+
+  // 1. 1-Step Lookahead Contradiction: Check if placing a cat at (cell.row, cell.col) directly starves any unit
+  for (const cell of emptyNonSol) {
+    const hypotheticalCats = [...placedCats, { row: cell.row, col: cell.col }];
+
+    // Check Row starvation
+    for (let r = 0; r < size; r++) {
+      if (hypotheticalCats.some((cat) => cat.row === r)) continue;
+      const remaining = cells.filter(
+        (c) => c.row === r && c.state !== 'mark' && isValidPlacement(c.row, c.col, hypotheticalCats, regions)
+      );
+      if (remaining.length === 0) {
+        const wiped = cells.filter(
+          (c) => c.row === r && c.state === 'empty' && !isValidPlacement(c.row, c.col, [{ row: cell.row, col: cell.col }], regions)
+        );
+        return {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} eliminates all valid spots in Row ${r + 1}! Mark this square with an ❌.`,
+          steps: [
+            `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
+            `That cat eliminates all remaining open spots in Row ${r + 1} (${wiped.map((w) => `Column ${w.col + 1}`).join(', ')}).`,
+            `Every row must contain exactly one cat, so leaving Row ${r + 1} with 0 valid squares is impossible.`,
+            `Conclusion: ${cellName(cell.row, cell.col)} cannot contain a cat. Mark it with an ❌!`,
+          ],
+          involvedCells: [
+            { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+          ],
+        };
+      }
+    }
+
+    // Check Column starvation
+    for (let c = 0; c < size; c++) {
+      if (hypotheticalCats.some((cat) => cat.col === c)) continue;
+      const remaining = cells.filter(
+        (item) => item.col === c && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
+      );
+      if (remaining.length === 0) {
+        const wiped = cells.filter(
+          (item) => item.col === c && item.state === 'empty' && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
+        );
+        return {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} eliminates all valid spots in Column ${c + 1}! Mark this square with an ❌.`,
+          steps: [
+            `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
+            `That cat eliminates all remaining open spots in Column ${c + 1} (${wiped.map((w) => `Row ${w.row + 1}`).join(', ')}).`,
+            `Every column must contain exactly one cat, so leaving Column ${c + 1} with 0 valid squares is impossible.`,
+            `Conclusion: ${cellName(cell.row, cell.col)} cannot contain a cat. Mark it with an ❌!`,
+          ],
+          involvedCells: [
+            { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+          ],
+        };
+      }
+    }
+
+    // Check Territory starvation
+    for (let reg = 0; reg < size; reg++) {
+      if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+      const remaining = cells.filter(
+        (item) => regions[item.row][item.col] === reg && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
+      );
+      if (remaining.length === 0) {
+        const wiped = cells.filter(
+          (item) => regions[item.row][item.col] === reg && item.state === 'empty' && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
+        );
+        return {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} eliminates all valid spots in Territory ${reg + 1}! Mark this square with an ❌.`,
+          steps: [
+            `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
+            `That cat eliminates all remaining open spots in Territory ${reg + 1}.`,
+            `Every territory must contain exactly one cat, so leaving Territory ${reg + 1} with 0 valid squares is impossible.`,
+            `Conclusion: ${cellName(cell.row, cell.col)} cannot contain a cat. Mark it with an ❌!`,
+          ],
+          involvedCells: [
+            { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+          ],
+        };
+      }
+    }
+  }
+
+  // 2. Multi-Step Forcing Chains (Propagation):
+  // Check if placing a cat at (cell.row, cell.col) forces a single square in another unit, leading to contradiction
+  for (const cell of emptyNonSol) {
+    const hypotheticalCats = [...placedCats, { row: cell.row, col: cell.col }];
+
+    for (let reg = 0; reg < size; reg++) {
+      if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+      const cand = cells.filter(
+        (item) => regions[item.row][item.col] === reg && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
+      );
+      if (cand.length === 1) {
+        const forced = cand[0];
+        const nextCats = [...hypotheticalCats, { row: forced.row, col: forced.col }];
+
+        // Check if nextCats starves any territory
+        for (let targetReg = 0; targetReg < size; targetReg++) {
+          if (nextCats.some((cat) => regions[cat.row][cat.col] === targetReg)) continue;
+          const rem = cells.filter(
+            (item) => regions[item.row][item.col] === targetReg && item.state !== 'mark' && isValidPlacement(item.row, item.col, nextCats, regions)
+          );
+          if (rem.length === 0) {
+            return {
+              type: 'elimination',
+              row: cell.row,
+              col: cell.col,
+              explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves Territory ${targetReg + 1}! Mark this square with an ❌.`,
+              steps: [
+                `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
+                `In Territory ${reg + 1}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
+                `Placing that forced cat eliminates all remaining open spots in Territory ${targetReg + 1}!`,
+                `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
+              ],
+              involvedCells: [
+                { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+                { row: forced.row, col: forced.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
+              ],
+            };
+          }
+        }
+
+        // Check if nextCats starves any row
+        for (let r = 0; r < size; r++) {
+          if (nextCats.some((cat) => cat.row === r)) continue;
+          const rem = cells.filter(
+            (item) => item.row === r && item.state !== 'mark' && isValidPlacement(item.row, item.col, nextCats, regions)
+          );
+          if (rem.length === 0) {
+            return {
+              type: 'elimination',
+              row: cell.row,
+              col: cell.col,
+              explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves Row ${r + 1}! Mark this square with an ❌.`,
+              steps: [
+                `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
+                `In Territory ${reg + 1}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
+                `Placing that forced cat eliminates all remaining open spots in Row ${r + 1}!`,
+                `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
+              ],
+              involvedCells: [
+                { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+                { row: forced.row, col: forced.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
+              ],
+            };
+          }
+        }
+
+        // Check if nextCats starves any column
+        for (let c = 0; c < size; c++) {
+          if (nextCats.some((cat) => cat.col === c)) continue;
+          const rem = cells.filter(
+            (item) => item.col === c && item.state !== 'mark' && isValidPlacement(item.row, item.col, nextCats, regions)
+          );
+          if (rem.length === 0) {
+            return {
+              type: 'elimination',
+              row: cell.row,
+              col: cell.col,
+              explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves Column ${c + 1}! Mark this square with an ❌.`,
+              steps: [
+                `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
+                `In Territory ${reg + 1}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
+                `Placing that forced cat eliminates all remaining open spots in Column ${c + 1}!`,
+                `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
+              ],
+              involvedCells: [
+                { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
+                { row: forced.row, col: forced.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
+              ],
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Smart logical hint deduction engine:
+ * Explains HOW a cell causes a contradiction or constraint issue,
+ * provides explicit numbered deduction steps, and returns involved
+ * cells with faded states and highlights.
+ */
 export function generateHint(
   puzzle: Puzzle,
   cells: BoardCell[]
@@ -238,7 +580,12 @@ export function generateHint(
           type: 'elimination',
           row: cell.row,
           col: cell.col,
-          explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! It conflicts with the cat in Row ${conflictingCat.row + 1}, Column ${conflictingCat.col + 1} (${relation}). Remove it to clear the contradiction. 😿`,
+          explanation: `The cat in ${cellName(cell.row, cell.col)} doesn't belong here! It conflicts with the cat in ${cellName(conflictingCat.row, conflictingCat.col)} (${relation}). Remove it to clear the contradiction. 😿`,
+          steps: [
+            `The cat at ${cellName(cell.row, cell.col)} conflicts with the cat at ${cellName(conflictingCat.row, conflictingCat.col)} (${relation}).`,
+            `Cats cannot share the same row, column, or territory, nor touch even diagonally.`,
+            `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
+          ],
           involvedCells: [
             { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
             { row: conflictingCat.row, col: conflictingCat.col, highlight: true, reason: 'conflict' },
@@ -260,7 +607,12 @@ export function generateHint(
             type: 'elimination',
             row: cell.row,
             col: cell.col,
-            explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! It eliminates all open squares in Row ${r + 1}. Remove it to clear the contradiction. 😿`,
+            explanation: `The cat in ${cellName(cell.row, cell.col)} doesn't belong here! It eliminates all open squares in Row ${r + 1}. Remove it to clear the contradiction. 😿`,
+            steps: [
+              `The cat placed at ${cellName(cell.row, cell.col)} eliminates all open squares in Row ${r + 1}.`,
+              `Row ${r + 1} must contain exactly one cat, but now has 0 valid squares available.`,
+              `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
+            ],
             involvedCells: [
               { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
               ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
@@ -282,7 +634,12 @@ export function generateHint(
             type: 'elimination',
             row: cell.row,
             col: cell.col,
-            explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! It eliminates all open squares in Column ${c + 1}. Remove it to clear the contradiction. 😿`,
+            explanation: `The cat in ${cellName(cell.row, cell.col)} doesn't belong here! It eliminates all open squares in Column ${c + 1}. Remove it to clear the contradiction. 😿`,
+            steps: [
+              `The cat placed at ${cellName(cell.row, cell.col)} eliminates all open squares in Column ${c + 1}.`,
+              `Column ${c + 1} must contain exactly one cat, but now has 0 valid squares available.`,
+              `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
+            ],
             involvedCells: [
               { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
               ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
@@ -304,7 +661,12 @@ export function generateHint(
             type: 'elimination',
             row: cell.row,
             col: cell.col,
-            explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! It eliminates all open squares in Territory ${reg + 1}. Remove it to clear the contradiction. 😿`,
+            explanation: `The cat in ${cellName(cell.row, cell.col)} doesn't belong here! It eliminates all open squares in Territory ${reg + 1}. Remove it to clear the contradiction. 😿`,
+            steps: [
+              `The cat placed at ${cellName(cell.row, cell.col)} eliminates all open squares in Territory ${reg + 1}.`,
+              `Territory ${reg + 1} must contain exactly one cat, but now has 0 valid squares available.`,
+              `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
+            ],
             involvedCells: [
               { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
               ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
@@ -319,7 +681,12 @@ export function generateHint(
         type: 'elimination',
         row: cell.row,
         col: cell.col,
-        explanation: `The cat in Row ${cell.row + 1}, Column ${cell.col + 1} doesn't belong here! Remove it to clear the contradiction. 😿`,
+        explanation: `The cat in ${cellName(cell.row, cell.col)} doesn't belong here! Remove it to clear the contradiction. 😿`,
+        steps: [
+          `The cat at ${cellName(cell.row, cell.col)} prevents the rest of the board from completing cleanly.`,
+          `Every row, column, and territory requires a unique solution.`,
+          `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
+        ],
         involvedCells: [
           { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
           ...(solCat ? [{ row: solCat.row, col: solCat.col, fadedState: 'cat' as const, highlight: true, reason: 'caused_by' as const }] : []),
@@ -340,7 +707,12 @@ export function generateHint(
         type: 'placement',
         row: sol.row,
         col: sol.col,
-        explanation: `The ❌ in Row ${sol.row + 1}, Column ${sol.col + 1} was placed by mistake! A happy cat belongs here. 🐱`,
+        explanation: `The ❌ in ${cellName(sol.row, sol.col)} was placed by mistake! A happy cat belongs here. 🐱`,
+        steps: [
+          `The square at ${cellName(sol.row, sol.col)} was marked with an ❌ by mistake.`,
+          `Without this square, Territory ${reg + 1} has no remaining valid squares that complete the puzzle.`,
+          `Conclusion: Clear the ❌ at ${cellName(sol.row, sol.col)} — a cat belongs right here!`,
+        ],
         involvedCells: [
           { row: sol.row, col: sol.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
           ...otherRegCells.slice(0, 4).map((c) => ({
@@ -365,7 +737,12 @@ export function generateHint(
         type: 'elimination',
         row: cell.row,
         col: cell.col,
-        explanation: `A cat here would conflict (${relation}) with the cat at Row ${blocker.row + 1}, Column ${blocker.col + 1}. Mark this square with an ❌.`,
+        explanation: `A cat here would conflict (${relation}) with the cat at ${cellName(blocker.row, blocker.col)}. Mark this square with an ❌.`,
+        steps: [
+          `A cat is already placed at ${cellName(blocker.row, blocker.col)}.`,
+          `Rules state cats cannot share the same row, column, territory, or touch (${relation}).`,
+          `Conclusion: Mark ${cellName(cell.row, cell.col)} with an ❌.`,
+        ],
         involvedCells: [
           { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
           { row: blocker.row, col: blocker.col, highlight: true, reason: 'conflict' },
@@ -374,7 +751,7 @@ export function generateHint(
     }
   }
 
-  // 4. Forced moves in rows
+  // 4. Forced moves in rows (Naked Single)
   for (let r = 0; r < size; r++) {
     const rowCells = cells.filter((c) => c.row === r);
     const hasCat = rowCells.some((c) => c.state === 'cat');
@@ -388,6 +765,11 @@ export function generateHint(
           row: target.row,
           col: target.col,
           explanation: `In Row ${r + 1}, all other squares are blocked or eliminated. Only this square remains open for a cat!`,
+          steps: [
+            `Inspect Row ${r + 1}: all other squares are marked with ❌ or blocked by existing rules.`,
+            `Every row must contain exactly one cat.`,
+            `Conclusion: Place a cat at ${cellName(target.row, target.col)}!`,
+          ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
             ...others.map((o) => ({
@@ -403,7 +785,7 @@ export function generateHint(
     }
   }
 
-  // 5. Forced moves in columns
+  // 5. Forced moves in columns (Naked Single)
   for (let c = 0; c < size; c++) {
     const colCells = cells.filter((item) => item.col === c);
     const hasCat = colCells.some((item) => item.state === 'cat');
@@ -417,6 +799,11 @@ export function generateHint(
           row: target.row,
           col: target.col,
           explanation: `In Column ${c + 1}, all other squares are blocked or eliminated. Only this square remains open for a cat!`,
+          steps: [
+            `Inspect Column ${c + 1}: all other squares are marked with ❌ or blocked by existing rules.`,
+            `Every column must contain exactly one cat.`,
+            `Conclusion: Place a cat at ${cellName(target.row, target.col)}!`,
+          ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
             ...others.map((o) => ({
@@ -432,7 +819,7 @@ export function generateHint(
     }
   }
 
-  // 6. Forced moves in regions
+  // 6. Forced moves in regions (Naked Single)
   for (let reg = 0; reg < size; reg++) {
     const regCells = cells.filter((item) => regions[item.row][item.col] === reg);
     const hasCat = regCells.some((item) => item.state === 'cat');
@@ -446,6 +833,11 @@ export function generateHint(
           row: target.row,
           col: target.col,
           explanation: `In colored Territory ${reg + 1}, all other squares are blocked or eliminated. Only this square remains open for a cat!`,
+          steps: [
+            `Inspect Territory ${reg + 1}: all other squares are marked with ❌ or blocked by existing rules.`,
+            `Every colored territory must contain exactly one cat.`,
+            `Conclusion: Place a cat at ${cellName(target.row, target.col)}!`,
+          ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
             ...others.map((o) => ({
@@ -461,95 +853,19 @@ export function generateHint(
     }
   }
 
-  // 7. Lookahead contradiction deduction: Check empty cells that cannot be cats
-  for (const cell of cells) {
-    if (cell.state === 'empty' && !solutionSet.has(`${cell.row},${cell.col}`)) {
-      // Simulate placing a hypothetical cat at (cell.row, cell.col)
-      const hypotheticalCats = [...placedCats, { row: cell.row, col: cell.col }];
-
-      // Check if this hypothetical cat starves any row
-      for (let r = 0; r < size; r++) {
-        if (hypotheticalCats.some((cat) => cat.row === r)) continue;
-        const remaining = cells.filter(
-          (c) => c.row === r && c.state !== 'mark' && isValidPlacement(c.row, c.col, hypotheticalCats, regions)
-        );
-        if (remaining.length === 0) {
-          const wiped = cells.filter(
-            (c) => c.row === r && c.state === 'empty' && !isValidPlacement(c.row, c.col, [{ row: cell.row, col: cell.col }], regions)
-          );
-          return {
-            type: 'elimination',
-            row: cell.row,
-            col: cell.col,
-            explanation: `Placing a cat at Row ${cell.row + 1}, Column ${cell.col + 1} eliminates all valid spots in Row ${r + 1}! Therefore, mark this square with an ❌.`,
-            involvedCells: [
-              { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
-            ],
-          };
-        }
-      }
-
-      // Check if this hypothetical cat starves any column
-      for (let c = 0; c < size; c++) {
-        if (hypotheticalCats.some((cat) => cat.col === c)) continue;
-        const remaining = cells.filter(
-          (item) => item.col === c && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
-        );
-        if (remaining.length === 0) {
-          const wiped = cells.filter(
-            (item) => item.col === c && item.state === 'empty' && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
-          );
-          return {
-            type: 'elimination',
-            row: cell.row,
-            col: cell.col,
-            explanation: `Placing a cat at Row ${cell.row + 1}, Column ${cell.col + 1} eliminates all valid spots in Column ${c + 1}! Therefore, mark this square with an ❌.`,
-            involvedCells: [
-              { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
-            ],
-          };
-        }
-      }
-
-      // Check if this hypothetical cat starves any region
-      for (let reg = 0; reg < size; reg++) {
-        if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
-        const remaining = cells.filter(
-          (item) => regions[item.row][item.col] === reg && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
-        );
-        if (remaining.length === 0) {
-          const wiped = cells.filter(
-            (item) => regions[item.row][item.col] === reg && item.state === 'empty' && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
-          );
-          return {
-            type: 'elimination',
-            row: cell.row,
-            col: cell.col,
-            explanation: `Placing a cat at Row ${cell.row + 1}, Column ${cell.col + 1} eliminates all valid spots in Territory ${reg + 1}! Therefore, mark this square with an ❌.`,
-            involvedCells: [
-              { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-              ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
-            ],
-          };
-        }
-      }
-
-      // Fallback elimination
-      return {
-        type: 'elimination',
-        row: cell.row,
-        col: cell.col,
-        explanation: `A cat here cannot be part of a complete solution. Mark it with an ❌!`,
-        involvedCells: [
-          { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
-        ],
-      };
-    }
+  // 7. Line-Region Interaction (Pointing & Claiming reductions)
+  const lineReduction = findLineRegionReduction(size, regions, cells, placedCats);
+  if (lineReduction) {
+    return lineReduction;
   }
 
-  // 8. Place an unplaced cat from solution
+  // 8. Lookahead Contradiction & Multi-Step Forcing Chains
+  const lookaheadHint = findLookaheadContradiction(size, regions, cells, placedCats, solutionSet);
+  if (lookaheadHint) {
+    return lookaheadHint;
+  }
+
+  // 9. Place an unplaced cat from solution with clear deduction explanation
   for (const sol of solution) {
     const cell = cells.find((c) => c.row === sol.row && c.col === sol.col);
     if (cell && cell.state === 'empty') {
@@ -557,11 +873,17 @@ export function generateHint(
       const colHasCat = cells.some((c) => c.col === sol.col && c.state === 'cat');
       const regHasCat = cells.some((c) => regions[c.row][c.col] === regions[sol.row][sol.col] && c.state === 'cat');
       if (!rowHasCat && !colHasCat && !regHasCat) {
+        const reg = regions[sol.row][sol.col];
         return {
           type: 'placement',
           row: sol.row,
           col: sol.col,
-          explanation: `A happy cat belongs right here in Row ${sol.row + 1}, Column ${sol.col + 1}! 🐱`,
+          explanation: `A happy cat belongs right here in ${cellName(sol.row, sol.col)}! 🐱`,
+          steps: [
+            `Examine ${cellName(sol.row, sol.col)} inside Territory ${reg + 1}.`,
+            `Placing a cat here maintains the unique, valid solution across all rows, columns, and territories.`,
+            `Conclusion: Place a cat at ${cellName(sol.row, sol.col)}!`,
+          ],
           involvedCells: [
             { row: sol.row, col: sol.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
           ],

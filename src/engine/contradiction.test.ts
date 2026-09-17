@@ -285,6 +285,80 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
     assert.ok(ruleHint.involvedCells && ruleHint.involvedCells.length >= 2);
     const targetFaded = ruleHint.involvedCells.find((inv) => inv.row === ruleHint.row && inv.col === ruleHint.col);
     assert.strictEqual(targetFaded?.fadedState, 'mark');
+    assert.ok(ruleHint.steps && ruleHint.steps.length > 0, 'Hint must include logical steps');
+  });
+
+  test('Hint engine always produces structured logical steps and never emits generic fallback', () => {
+    // Check initial hints across first 10 campaign levels
+    for (let i = 0; i < 10; i++) {
+      const level = CAMPAIGN_LEVELS[i];
+      const cells: BoardCell[] = [];
+      for (let r = 0; r < level.size; r++) {
+        for (let c = 0; c < level.size; c++) {
+          cells.push({
+            row: r,
+            col: c,
+            region: level.regions[r][c],
+            state: 'empty',
+            hasConflict: false,
+            isHinted: false,
+          });
+        }
+      }
+
+      const hint = generateHint(level, cells);
+      assert.ok(hint, `Level ${level.levelNumber} must produce a hint`);
+      assert.ok(
+        !hint.explanation.includes('cannot be part of a complete solution'),
+        `Level ${level.levelNumber} hint must not use generic fallback message`
+      );
+      assert.ok(hint.steps && hint.steps.length >= 2, `Level ${level.levelNumber} hint must have at least 2 deductive steps`);
+      assert.ok(
+        hint.steps.some((s) => s.includes('Conclusion')),
+        `Level ${level.levelNumber} steps must include a conclusion`
+      );
+    }
+  });
+
+  test('Pointing / Claiming reduction generates explicit line-territory logical steps', () => {
+    // 4x4 custom puzzle where Territory 0 has all cells in Row 0
+    const pointingPuzzle: Puzzle = {
+      id: 'pointing-test',
+      size: 4,
+      regions: [
+        [0, 0, 1, 1],
+        [2, 2, 1, 1],
+        [2, 2, 3, 3],
+        [2, 2, 3, 3],
+      ],
+      solution: [
+        { row: 0, col: 1 },
+        { row: 1, col: 3 },
+        { row: 2, col: 0 },
+        { row: 3, col: 2 },
+      ],
+    };
+
+    const cells: BoardCell[] = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        cells.push({
+          row: r,
+          col: c,
+          region: pointingPuzzle.regions[r][c],
+          state: 'empty',
+          hasConflict: false,
+          isHinted: false,
+        });
+      }
+    }
+
+    const hint = generateHint(pointingPuzzle, cells);
+    assert.ok(hint);
+    assert.ok(hint.steps && hint.steps.length >= 3);
+    assert.ok(hint.explanation.length > 0);
+    assert.ok(!hint.explanation.includes('cannot be part of a complete solution'));
   });
 });
+
 

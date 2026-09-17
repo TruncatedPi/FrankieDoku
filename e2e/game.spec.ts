@@ -115,3 +115,26 @@ test('project-subpath icons, fonts, worker and gameplay remain available offline
   expect(await page.evaluate(async () => { await document.fonts.ready; return document.fonts.check('16px Comfortaa'); })).toBe(true);
   } finally { server.close(); }
 });
+
+test('hint overlays menu area without jumping the board and displays logical steps', async ({ page }) => {
+  await page.goto('./');
+  const board = page.locator('[data-testid="game-board"]');
+  const boxBefore = (await board.boundingBox())!;
+
+  // Click Hint button
+  await page.getByRole('button', { name: /hint/i }).click();
+
+  // Hint overlay must be visible covering menu
+  const hintOverlay = page.locator('[data-testid="hint-overlay"]');
+  await expect(hintOverlay).toBeVisible();
+
+  // The board's vertical position must NOT jump down (within subpixel rendering tolerance)
+  const boxAfter = (await board.boundingBox())!;
+  expect(Math.abs(boxAfter.y - boxBefore.y)).toBeLessThanOrEqual(2);
+
+  // Dismiss button restores menus
+  await page.getByRole('button', { name: 'Dismiss Hint' }).click();
+  await expect(hintOverlay).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Levels', exact: true })).toBeVisible();
+});
+

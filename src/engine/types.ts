@@ -102,5 +102,6 @@ export interface HintResult {
   row: number;
   col: number;
   explanation: string;
+  steps?: string[];
   involvedCells?: HintInvolvedCell[];
 }

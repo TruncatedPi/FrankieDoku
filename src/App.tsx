@@ -10,7 +10,7 @@ import { TwoPlayerModal } from './components/TwoPlayerModal';
 import { SettingsModal } from './components/SettingsModal';
 import { InstallGuideModal } from './components/InstallGuideModal';
 import { CatBreed } from './engine/types';
-import { Sparkles, RotateCcw, HeartOff, Users, X } from 'lucide-react';
+import { RotateCcw, HeartOff, Users } from 'lucide-react';
 import { CatIcon } from './components/CatIcon';
 import { FreePlayModal } from './components/FreePlayModal';
 
@@ -93,6 +93,8 @@ export function App() {
         onOpenTwoPlayer={() => setIsTwoPlayerOpen(true)}
         onNewFreePlay={() => setIsFreePlayOpen(true)}
         catBreed={activeBreed}
+        activeHint={activeHint}
+        onDismissHint={handleDismissHint}
       />
 
       {/* Main Game Area */}
@@ -116,24 +118,6 @@ export function App() {
               </div>
             </div>
             <Users className="w-4 h-4 text-amber-600 dark:text-amber-400 mr-2" />
-          </div>
-        )}
-
-        {/* Active Logical Hint Notification */}
-        {activeHint && (
-          <div className="w-full max-w-[min(92vw,480px)] p-2.5 rounded-2xl bg-gradient-to-r from-amber-400/20 to-orange-400/20 border border-amber-400/50 flex items-center gap-2 animate-bounce-small">
-            <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-300 shrink-0 fill-amber-400" />
-            <p className="text-xs font-semibold text-amber-950 dark:text-amber-100 leading-snug flex-1">
-              {activeHint.explanation}
-            </p>
-            <button
-              type="button"
-              onClick={handleDismissHint}
-              className="p-1 rounded-lg hover:bg-amber-400/20 text-amber-900 dark:text-amber-100 transition-colors"
-              aria-label="Dismiss Hint"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         )}
 
