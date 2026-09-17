@@ -68,3 +68,33 @@ test('touch with micro-movement toggles mark on and off', async ({ page }) => {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await expect(cell).toHaveAttribute('data-state', 'empty');
 });
+
+test('compact spacing under Zen banner and bottom buttons fit within viewport', async ({ page }) => {
+  await page.goto('./');
+  // Switch to Zen mode to verify Zen banner
+  await page.getByRole('button', { name: 'Settings' }).tap();
+  await page.getByRole('button', { name: 'Zen (Infinite Lives)' }).tap();
+  await page.getByRole('button', { name: 'Close Settings' }).tap();
+
+  const zenBadge = page.getByText('🐾 Zen Mode');
+  await expect(zenBadge).toBeVisible();
+
+  const board = page.locator('[data-cell]').first().locator('..').locator('..');
+  const zenBox = (await zenBadge.boundingBox())!;
+  const boardBox = (await board.boundingBox())!;
+
+  // Verify gap under Zen banner is small/compact (under 45px, not a giant 100px void)
+  expect(boardBox.y - (zenBox.y + zenBox.height)).toBeLessThan(45);
+
+  // Verify all bottom buttons are visible and inside viewport
+  const undoBtn = page.getByRole('button', { name: 'Undo' });
+  const hintBtn = page.getByRole('button', { name: 'Hint' });
+  const resetBtn = page.getByRole('button', { name: 'Reset' });
+  await expect(undoBtn).toBeVisible();
+  await expect(hintBtn).toBeVisible();
+  await expect(resetBtn).toBeVisible();
+
+  const resetBox = (await resetBtn.boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(resetBox.y + resetBox.height).toBeLessThanOrEqual(viewport.height);
+});

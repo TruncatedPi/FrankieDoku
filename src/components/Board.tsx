@@ -204,7 +204,11 @@ export const Board: React.FC<BoardProps> = ({
 
   return (
     <div
-      className="relative w-full max-w-[min(92vw,480px)] aspect-square mx-auto touch-none select-none rounded-3xl p-3 shadow-xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-amber-900/10 dark:border-white/10 transition-all duration-300"
+      className="relative w-full aspect-square mx-auto touch-none select-none rounded-3xl p-2.5 sm:p-3 shadow-xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-amber-900/10 dark:border-white/10 transition-all duration-300 shrink-0"
+      style={{
+        maxWidth: 'min(92vw, 460px, calc(100dvh - 280px))',
+        maxHeight: 'min(92vw, 460px, calc(100dvh - 280px))',
+      }}
       onContextMenu={(e) => e.preventDefault()}
       aria-busy={disabled}
       onPointerMove={e => {

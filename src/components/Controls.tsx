@@ -29,13 +29,13 @@ export const Controls: React.FC<ControlsProps> = ({
   remainingCats,
 }) => {
   return (
-    <div className="w-full max-w-[min(94vw,480px)] mx-auto mt-2 px-2 flex flex-col gap-2.5 select-none">
+    <div className="w-full max-w-[min(94vw,480px)] mx-auto mt-1 sm:mt-2 px-2 flex flex-col gap-1.5 sm:gap-2.5 select-none shrink-0">
       {/* Primary Input Mode Toggle (Single-tap friendly for phones & tablets) */}
       <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-slate-200/60 dark:border-white/10 shadow-sm">
         <button
           type="button"
           onClick={() => onSetInputMode('mark')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${
             inputMode === 'mark'
               ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-100 shadow-sm ring-2 ring-amber-400/80 scale-[1.02]'
               : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5'
@@ -50,7 +50,7 @@ export const Controls: React.FC<ControlsProps> = ({
         <button
           type="button"
           onClick={() => onSetInputMode('cat')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${
             inputMode === 'cat'
               ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-400 scale-[1.02]'
               : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5'
@@ -64,7 +64,7 @@ export const Controls: React.FC<ControlsProps> = ({
       </div>
 
       {/* Auxiliary Action Buttons: Undo, Redo, Hint, Restart */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
         <button
           type="button"
           onClick={onUndo}

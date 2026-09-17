@@ -73,7 +73,7 @@ export function App() {
       : settings.catBreed;
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between overflow-x-hidden bg-gradient-to-b from-[#fdf8f4] to-[#fbf1e8] dark:from-[#1a1926] dark:to-[#12111a] text-slate-800 dark:text-slate-100 font-bubble transition-colors duration-300 pb-4">
+    <div className="min-h-screen min-h-[100dvh] w-full flex flex-col justify-start overflow-x-hidden overflow-y-auto bg-gradient-to-b from-[#fdf8f4] to-[#fbf1e8] dark:from-[#1a1926] dark:to-[#12111a] text-slate-800 dark:text-slate-100 font-bubble transition-colors duration-300 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]">
       {/* Header */}
       <Header
         gameMode={gameMode}
@@ -96,7 +96,7 @@ export function App() {
       />
 
       {/* Main Game Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-3 py-1 gap-2">
+      <main className="flex-1 w-full max-w-[min(94vw,500px)] mx-auto flex flex-col items-center justify-start px-2 pt-1 pb-1 gap-1.5 sm:gap-2">
         {isGenerating && <p role="status" className="text-sm font-bold text-amber-700">Creating your map…</p>}
         {generationError && <p role="alert" className="text-sm text-rose-700">{generationError} Choose a board size or daily date to retry.</p>}
         {/* Two Player Active Turn Banner */}

@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="w-full max-w-[min(94vw,500px)] mx-auto pt-3 pb-2 px-3 flex flex-col gap-2 select-none">
+    <header className="w-full max-w-[min(94vw,500px)] mx-auto pt-2 pb-1 sm:pt-3 sm:pb-2 px-3 flex flex-col gap-1.5 sm:gap-2 select-none">
       {/* Top Bar: Brand & Quick Action Buttons */}
       <div className="flex items-center justify-between">
         {/* Brand Logo & Name */}
