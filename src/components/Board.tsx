@@ -23,74 +23,74 @@ interface BoardProps {
 // Distinct, cozy pastel palettes for regions (up to 12 regions)
 const REGION_PALETTES: Record<ThemePalette, string[]> = {
   cozy: [
-    '#f87171', // Coral Red
-    '#38bdf8', // Sky Blue
-    '#4ade80', // Mint Green
-    '#fbbf24', // Amber Gold
-    '#c084fc', // Lavender Violet
-    '#fb923c', // Tangerine Orange
-    '#2dd4bf', // Turquoise Teal
-    '#f472b6', // Rose Pink
-    '#a3e635', // Lime
-    '#818cf8', // Indigo Periwinkle
-    '#fcd34d', // Buttercup
-    '#e07a5f', // Terracotta Clay
+    '#ef4444', // Coral Red
+    '#0284c7', // Sky Cerulean
+    '#10b981', // Mint Emerald
+    '#f59e0b', // Honey Gold
+    '#9333ea', // Royal Purple
+    '#f97316', // Tangerine Orange
+    '#06b6d4', // Turquoise Teal
+    '#ec4899', // Blossom Pink
+    '#84cc16', // Spring Lime
+    '#1e3a8a', // Deep Midnight Blue
+    '#7c2d12', // Warm Dark Terracotta
+    '#fef08a', // Warm Buttercream
   ],
   pastel: [
     '#ff99c8', // Sweet Pink
     '#fcf6bd', // Lemon Butter
     '#7ee8fa', // Ice Blue
-    '#a9def9', // Sky Azure
+    '#b388ff', // Pastel Violet
     '#e4c1f9', // Orchid Lilac
     '#ffb38a', // Peach Apricot
     '#99e2b4', // Seafoam Green
     '#ffd670', // Sunshine Gold
-    '#ff70a6', // Watermelon Rose
-    '#48cae4', // Ocean Cyan
-    '#b5e48c', // Pistachio Lime
-    '#c77dff', // Rich Violet
+    '#f43f5e', // Strawberry Rose
+    '#38bdf8', // Ocean Blue
+    '#a3e635', // Pistachio Lime
+    '#7c3aed', // Deep Iris
   ],
   matcha: [
-    '#6a994e', // Fresh Matcha Green
-    '#f4a261', // Warm Apricot Melon
-    '#52b788', // Mint Meadow
-    '#e76f51', // Terracotta Blossom
-    '#5bc0be', // River Stream Cyan
-    '#ffd166', // Golden Pollen
-    '#a7c957', // Young Sprout Olive
-    '#b5838d', // Herbal Wild Berry
-    '#2a9d8f', // Forest Deep Teal
-    '#f3c68f', // Cream Foam
-    '#70a288', // Mountain Sage
-    '#e07a5f', // Clay Earth
+    '#2d6a4f', // Deep Forest Green (Primary Green)
+    '#d97706', // Warm Honey Amber
+    '#0284c7', // Mountain Lake Blue
+    '#c2410c', // Terracotta Clay
+    '#84cc16', // Fresh Lime Sprout (Bright Green)
+    '#86198f', // Wild Plum Berry
+    '#fde047', // Bright Sunflower Gold
+    '#99f6e4', // Crisp Mint Foam
+    '#e11d48', // Blossom Rose
+    '#78350f', // Cedar Chestnut
+    '#475569', // Alpine Slate
+    '#4338ca', // Deep Indigo Night
   ],
   lavender: [
     '#c084fc', // Amethyst Purple
     '#67e8f9', // Starlight Cyan
     '#f472b6', // Dream Rose
     '#a7f3d0', // Moonlit Mint
-    '#818cf8', // Periwinkle Indigo
+    '#6366f1', // Periwinkle Indigo
     '#fde047', // Star Gold
-    '#e879f9', // Orchid Pink
-    '#6ee7b7', // Aurora Emerald
-    '#93c5fd', // Powder Blue
+    '#d946ef', // Orchid Fuchsia
     '#fb923c', // Sunset Coral
-    '#d8b4fe', // Soft Lavender
-    '#2dd4bf', // Dream Turquoise
+    '#93c5fd', // Powder Blue
+    '#ef4444', // Crimson Spark
+    '#e9d5ff', // Soft Lavender Mist
+    '#0d9488', // Deep Twilight Teal
   ],
   midnight: [
-    '#1e3a8a', // Deep Royal Sapphire
-    '#065f46', // Deep Emerald Jade
-    '#701a75', // Deep Neon Fuchsia
-    '#7c2d12', // Deep Amber Rust
-    '#4c1d95', // Deep Royal Amethyst
-    '#134e4a', // Deep Neon Teal
-    '#831843', // Deep Rose Crimson
-    '#14532d', // Deep Forest Pine
-    '#1e40af', // Deep Electric Blue
-    '#78350f', // Deep Warm Ochre
-    '#581c87', // Deep Dark Violet
-    '#0f766e', // Deep Bright Cyan-Teal
+    '#00f0ff', // Electric Neon Cyan
+    '#ff007f', // Hot Neon Magenta
+    '#39ff14', // Electric Neon Lime (The single distinct neon green)
+    '#ffb700', // Bright Neon Amber
+    '#b026ff', // Electric Violet
+    '#ff5400', // Vivid Neon Orange
+    '#0044ff', // Deep Electric Royal Blue
+    '#ffff00', // Bright Neon Yellow
+    '#ffffff', // Pure Neon Ice White
+    '#ff0033', // Neon Signal Red
+    '#00ffcc', // Bright Neon Mint Turquoise
+    '#3b82f6', // Electric Sky Blue
   ],
 };
 

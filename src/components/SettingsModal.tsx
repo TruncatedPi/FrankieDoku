@@ -23,11 +23,11 @@ const BREEDS: { id: CatBreed; name: string; desc: string }[] = [
 ];
 
 const THEMES: { id: ThemePalette; name: string; colors: string[] }[] = [
-  { id: 'cozy', name: 'Cozy Warm', colors: ['#f87171', '#38bdf8', '#4ade80', '#fbbf24'] },
-  { id: 'pastel', name: 'Sweet Pastel', colors: ['#ff99c8', '#7ee8fa', '#ffd670', '#c77dff'] },
-  { id: 'matcha', name: 'Matcha Nature', colors: ['#6a994e', '#f4a261', '#5bc0be', '#ffd166'] },
+  { id: 'cozy', name: 'Cozy Warm', colors: ['#ef4444', '#0284c7', '#10b981', '#f59e0b'] },
+  { id: 'pastel', name: 'Sweet Pastel', colors: ['#ff99c8', '#7ee8fa', '#ffd670', '#b388ff'] },
+  { id: 'matcha', name: 'Matcha Nature', colors: ['#2d6a4f', '#d97706', '#0284c7', '#c2410c'] },
   { id: 'lavender', name: 'Lavender Dream', colors: ['#c084fc', '#67e8f9', '#f472b6', '#fde047'] },
-  { id: 'midnight', name: 'Twilight Neon', colors: ['#1e3a8a', '#065f46', '#701a75', '#7c2d12'] },
+  { id: 'midnight', name: 'Twilight Neon', colors: ['#00f0ff', '#ff007f', '#39ff14', '#ffb700'] },
 ];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
