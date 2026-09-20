@@ -354,6 +354,289 @@ function findLineRegionReduction(
 }
 
 /**
+ * Searches for Subset Parity (Contained/Covered Territories) reductions:
+ * When k rows (or k columns) fully contain k territories, those k territories
+ * consume all k cats available in those lines. Therefore, any cell in those
+ * lines belonging to any other territory cannot contain a cat.
+ * Also checks the dual (when k lines are covered only by k territories).
+ */
+function findSubsetParityReduction(
+  size: number,
+  regions: number[][],
+  cells: BoardCell[],
+  placedCats: Coordinate[],
+  theme: ThemePalette = 'cozy'
+): HintResult | null {
+  const validCells = cells.filter(
+    (c) => c.state === 'empty' && isValidPlacement(c.row, c.col, placedCats, regions)
+  );
+
+  const rowHasCat = (r: number) => placedCats.some((c) => c.row === r);
+  const colHasCat = (c: number) => placedCats.some((cat) => cat.col === c);
+  const regHasCat = (reg: number) => placedCats.some((c) => regions[c.row][c.col] === reg);
+
+  const regValidCells = (reg: number) => validCells.filter((c) => regions[c.row][c.col] === reg);
+
+  // 1. Contiguous Row Bands [rStart..rEnd] containing k unplaced territories
+  for (let k = 2; k < size; k++) {
+    for (let rStart = 0; rStart <= size - k; rStart++) {
+      const rEnd = rStart + k - 1;
+
+      let openRows = 0;
+      for (let r = rStart; r <= rEnd; r++) {
+        if (!rowHasCat(r)) openRows++;
+      }
+      if (openRows === 0) continue;
+
+      const containedTerritories: number[] = [];
+      for (let reg = 0; reg < size; reg++) {
+        if (regHasCat(reg)) continue;
+        const vCells = regValidCells(reg);
+        if (vCells.length > 0 && vCells.every((c) => c.row >= rStart && c.row <= rEnd)) {
+          containedTerritories.push(reg);
+        }
+      }
+
+      if (containedTerritories.length === openRows) {
+        const elimCells = validCells.filter(
+          (c) => c.row >= rStart && c.row <= rEnd && !containedTerritories.includes(regions[c.row][c.col])
+        );
+
+        if (elimCells.length > 0) {
+          const counts = new Map<number, number>();
+          for (const c of elimCells) {
+            const reg = regions[c.row][c.col];
+            counts.set(reg, (counts.get(reg) || 0) + 1);
+          }
+          elimCells.sort((a, b) => {
+            const diff = (counts.get(regions[b.row][b.col]) || 0) - (counts.get(regions[a.row][a.col]) || 0);
+            if (diff !== 0) return diff;
+            return a.row === b.row ? a.col - b.col : a.row - b.row;
+          });
+
+          const target = elimCells[0];
+          const targetReg = regions[target.row][target.col];
+          const targetRegElim = elimCells.filter((c) => regions[c.row][c.col] === targetReg);
+
+          const containedCells = validCells.filter(
+            (c) => c.row >= rStart && c.row <= rEnd && containedTerritories.includes(regions[c.row][c.col])
+          );
+
+          const rowDesc = rStart === rEnd ? `Row ${rStart + 1}` : `Rows ${rStart + 1}–${rEnd + 1}`;
+          const rowLongDesc = rStart === rEnd ? `Row ${rStart + 1}` : `Rows ${rStart + 1} to ${rEnd + 1}`;
+
+          return {
+            type: 'elimination',
+            row: target.row,
+            col: target.col,
+            explanation: `${rowDesc} (${openRows} rows) fully contain ${openRows} territories. Squares for ${formatTerritoryTag(targetReg, theme)} in these rows cannot contain a cat! Mark ${cellName(target.row, target.col)} with an ❌.`,
+            steps: [
+              `${rowLongDesc} (${openRows} rows in total) can contain at most ${openRows} cats (1 cat per row).`,
+              `These rows fully contain ${openRows} entire territories: ${containedTerritories.map((t) => formatTerritoryTag(t, theme)).join(', ')}.`,
+              `Because each of these ${openRows} territories requires a cat, they consume all ${openRows} cats available in ${rowLongDesc}.`,
+              `Therefore, no other territory (such as ${formatTerritoryTag(targetReg, theme)}) can place a cat in ${rowLongDesc}.`,
+              `Conclusion: Mark ${cellName(target.row, target.col)} in ${formatTerritoryTag(targetReg, theme)} with an ❌!`,
+            ],
+            involvedCells: [
+              ...targetRegElim.map((c) => ({
+                row: c.row,
+                col: c.col,
+                fadedState: 'mark' as const,
+                highlight: true,
+                reason: 'forced_empty' as const,
+              })),
+              ...containedCells.map((c) => ({
+                row: c.row,
+                col: c.col,
+                highlight: true,
+                reason: 'caused_by' as const,
+              })),
+            ],
+          };
+        }
+      }
+    }
+  }
+
+  // 2. Contiguous Column Bands [cStart..cEnd] containing k unplaced territories
+  for (let k = 2; k < size; k++) {
+    for (let cStart = 0; cStart <= size - k; cStart++) {
+      const cEnd = cStart + k - 1;
+
+      let openCols = 0;
+      for (let c = cStart; c <= cEnd; c++) {
+        if (!colHasCat(c)) openCols++;
+      }
+      if (openCols === 0) continue;
+
+      const containedTerritories: number[] = [];
+      for (let reg = 0; reg < size; reg++) {
+        if (regHasCat(reg)) continue;
+        const vCells = regValidCells(reg);
+        if (vCells.length > 0 && vCells.every((item) => item.col >= cStart && item.col <= cEnd)) {
+          containedTerritories.push(reg);
+        }
+      }
+
+      if (containedTerritories.length === openCols) {
+        const elimCells = validCells.filter(
+          (item) => item.col >= cStart && item.col <= cEnd && !containedTerritories.includes(regions[item.row][item.col])
+        );
+
+        if (elimCells.length > 0) {
+          const counts = new Map<number, number>();
+          for (const item of elimCells) {
+            const reg = regions[item.row][item.col];
+            counts.set(reg, (counts.get(reg) || 0) + 1);
+          }
+          elimCells.sort((a, b) => {
+            const diff = (counts.get(regions[b.row][b.col]) || 0) - (counts.get(regions[a.row][a.col]) || 0);
+            if (diff !== 0) return diff;
+            return a.col === b.col ? a.row - b.row : a.col - b.col;
+          });
+
+          const target = elimCells[0];
+          const targetReg = regions[target.row][target.col];
+          const targetRegElim = elimCells.filter((item) => regions[item.row][item.col] === targetReg);
+
+          const containedCells = validCells.filter(
+            (item) => item.col >= cStart && item.col <= cEnd && containedTerritories.includes(regions[item.row][item.col])
+          );
+
+          const colDesc = cStart === cEnd ? `Column ${cStart + 1}` : `Columns ${cStart + 1}–${cEnd + 1}`;
+          const colLongDesc = cStart === cEnd ? `Column ${cStart + 1}` : `Columns ${cStart + 1} to ${cEnd + 1}`;
+
+          return {
+            type: 'elimination',
+            row: target.row,
+            col: target.col,
+            explanation: `${colDesc} (${openCols} columns) fully contain ${openCols} territories. Squares for ${formatTerritoryTag(targetReg, theme)} in these columns cannot contain a cat! Mark ${cellName(target.row, target.col)} with an ❌.`,
+            steps: [
+              `${colLongDesc} (${openCols} columns in total) can contain at most ${openCols} cats (1 cat per column).`,
+              `These columns fully contain ${openCols} entire territories: ${containedTerritories.map((t) => formatTerritoryTag(t, theme)).join(', ')}.`,
+              `Because each of these ${openCols} territories requires a cat, they consume all ${openCols} cats available in ${colLongDesc}.`,
+              `Therefore, no other territory (such as ${formatTerritoryTag(targetReg, theme)}) can place a cat in ${colLongDesc}.`,
+              `Conclusion: Mark ${cellName(target.row, target.col)} in ${formatTerritoryTag(targetReg, theme)} with an ❌!`,
+            ],
+            involvedCells: [
+              ...targetRegElim.map((item) => ({
+                row: item.row,
+                col: item.col,
+                fadedState: 'mark' as const,
+                highlight: true,
+                reason: 'forced_empty' as const,
+              })),
+              ...containedCells.map((item) => ({
+                row: item.row,
+                col: item.col,
+                highlight: true,
+                reason: 'caused_by' as const,
+              })),
+            ],
+          };
+        }
+      }
+    }
+  }
+
+  // 3. Covered Row Bands: when all open cells in [rStart..rEnd] belong to exactly openRows territories
+  for (let k = 2; k < size; k++) {
+    for (let rStart = 0; rStart <= size - k; rStart++) {
+      const rEnd = rStart + k - 1;
+
+      let openRows = 0;
+      for (let r = rStart; r <= rEnd; r++) {
+        if (!rowHasCat(r)) openRows++;
+      }
+      if (openRows === 0) continue;
+
+      const bandCells = validCells.filter((c) => c.row >= rStart && c.row <= rEnd);
+      if (bandCells.length === 0) continue;
+
+      const coveringTerritories = Array.from(new Set(bandCells.map((c) => regions[c.row][c.col])));
+      if (coveringTerritories.length === openRows && coveringTerritories.every((t) => !regHasCat(t))) {
+        const elimCells = validCells.filter(
+          (c) => (c.row < rStart || c.row > rEnd) && coveringTerritories.includes(regions[c.row][c.col])
+        );
+
+        if (elimCells.length > 0) {
+          const target = elimCells[0];
+          const targetReg = regions[target.row][target.col];
+          const rowDesc = rStart === rEnd ? `Row ${rStart + 1}` : `Rows ${rStart + 1}–${rEnd + 1}`;
+          const rowLongDesc = rStart === rEnd ? `Row ${rStart + 1}` : `Rows ${rStart + 1} to ${rEnd + 1}`;
+
+          return {
+            type: 'elimination',
+            row: target.row,
+            col: target.col,
+            explanation: `${rowDesc} only contain squares from ${openRows} territories. Mark ${cellName(target.row, target.col)} in ${formatTerritoryTag(targetReg, theme)} outside these rows with an ❌.`,
+            steps: [
+              `${rowLongDesc} (${openRows} rows) only contain squares from ${coveringTerritories.map((t) => formatTerritoryTag(t, theme)).join(', ')}.`,
+              `Because these ${openRows} rows require ${openRows} cats, each of those territories must place its cat within ${rowLongDesc}.`,
+              `Therefore, squares for ${formatTerritoryTag(targetReg, theme)} outside ${rowLongDesc} cannot contain a cat.`,
+              `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
+            ],
+            involvedCells: [
+              { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+              ...bandCells.map((c) => ({ row: c.row, col: c.col, highlight: true, reason: 'caused_by' as const })),
+            ],
+          };
+        }
+      }
+    }
+  }
+
+  // 4. Covered Column Bands: when all open cells in [cStart..cEnd] belong to exactly openCols territories
+  for (let k = 2; k < size; k++) {
+    for (let cStart = 0; cStart <= size - k; cStart++) {
+      const cEnd = cStart + k - 1;
+
+      let openCols = 0;
+      for (let c = cStart; c <= cEnd; c++) {
+        if (!colHasCat(c)) openCols++;
+      }
+      if (openCols === 0) continue;
+
+      const bandCells = validCells.filter((item) => item.col >= cStart && item.col <= cEnd);
+      if (bandCells.length === 0) continue;
+
+      const coveringTerritories = Array.from(new Set(bandCells.map((item) => regions[item.row][item.col])));
+      if (coveringTerritories.length === openCols && coveringTerritories.every((t) => !regHasCat(t))) {
+        const elimCells = validCells.filter(
+          (item) => (item.col < cStart || item.col > cEnd) && coveringTerritories.includes(regions[item.row][item.col])
+        );
+
+        if (elimCells.length > 0) {
+          const target = elimCells[0];
+          const targetReg = regions[target.row][target.col];
+          const colDesc = cStart === cEnd ? `Column ${cStart + 1}` : `Columns ${cStart + 1}–${cEnd + 1}`;
+          const colLongDesc = cStart === cEnd ? `Column ${cStart + 1}` : `Columns ${cStart + 1} to ${cEnd + 1}`;
+
+          return {
+            type: 'elimination',
+            row: target.row,
+            col: target.col,
+            explanation: `${colDesc} only contain squares from ${openCols} territories. Mark ${cellName(target.row, target.col)} in ${formatTerritoryTag(targetReg, theme)} outside these columns with an ❌.`,
+            steps: [
+              `${colLongDesc} (${openCols} columns) only contain squares from ${coveringTerritories.map((t) => formatTerritoryTag(t, theme)).join(', ')}.`,
+              `Because these ${openCols} columns require ${openCols} cats, each of those territories must place its cat within ${colLongDesc}.`,
+              `Therefore, squares for ${formatTerritoryTag(targetReg, theme)} outside ${colLongDesc} cannot contain a cat.`,
+              `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
+            ],
+            involvedCells: [
+              { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+              ...bandCells.map((item) => ({ row: item.row, col: item.col, highlight: true, reason: 'caused_by' as const })),
+            ],
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Lookahead contradiction deduction:
  * Tests placing a hypothetical cat at each non-solution empty cell.
  * Searches for 1-step unit starvation and multi-step forcing chains.
@@ -870,13 +1153,19 @@ export function generateHint(
     return lineReduction;
   }
 
-  // 8. Lookahead Contradiction & Multi-Step Forcing Chains
+  // 8. Subset Parity (Contained & Covered Territories)
+  const subsetHint = findSubsetParityReduction(size, regions, cells, placedCats, theme);
+  if (subsetHint) {
+    return subsetHint;
+  }
+
+  // 9. Lookahead Contradiction & Multi-Step Forcing Chains
   const lookaheadHint = findLookaheadContradiction(size, regions, cells, placedCats, solutionSet, theme);
   if (lookaheadHint) {
     return lookaheadHint;
   }
 
-  // 9. Place an unplaced cat from solution with clear deduction explanation
+  // 10. Place an unplaced cat from solution with clear deduction explanation
   for (const sol of solution) {
     const cell = cells.find((c) => c.row === sol.row && c.col === sol.col);
     if (cell && cell.state === 'empty') {

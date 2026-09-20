@@ -379,6 +379,52 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
     assert.ok(!hint.explanation.includes('Territory 1'), 'Must not refer to territory as a numeric value');
     assert.ok(!midnightHint.explanation.includes('Territory 1'), 'Must not refer to territory as a numeric value in midnight theme');
   });
+
+  test('Subset parity reduction: Rows 5-10 containing 6 territories eliminates Neon Amber in Level 49', () => {
+    const level49 = CAMPAIGN_LEVELS.find((l) => l.id === 'level-49');
+    assert.ok(level49, 'Level 49 must exist');
+
+    // Create cells matching screenshot with two player marks:
+    // (Row 4, Col 8) 0-indexed (3, 7) and (Row 6, Col 9) 0-indexed (5, 8)
+    const cells: BoardCell[] = [];
+    for (let r = 0; r < level49.size; r++) {
+      for (let c = 0; c < level49.size; c++) {
+        const isMark = (r === 3 && c === 7) || (r === 5 && c === 8);
+        cells.push({
+          row: r,
+          col: c,
+          region: level49.regions[r][c],
+          state: isMark ? 'mark' : 'empty',
+          hasConflict: false,
+          isHinted: false,
+        });
+      }
+    }
+
+    const hint = generateHint(level49, cells, 'midnight');
+    assert.ok(hint, 'Hint must be generated');
+    assert.strictEqual(hint.type, 'elimination', 'Hint must be an elimination of a non-contained territory');
+
+    // Verify it detected the Rows 5-10 subset parity
+    assert.ok(
+      hint.explanation.includes('Rows 5–10 (6 rows) fully contain 6 territories') ||
+        hint.explanation.includes('Rows 5 to 10'),
+      `Explanation should mention Rows 5-10 subset parity, got: ${hint.explanation}`
+    );
+    assert.ok(
+      hint.explanation.includes('Territory Neon Amber'),
+      `Explanation should eliminate Territory Neon Amber, got: ${hint.explanation}`
+    );
+    assert.ok(
+      !hint.explanation.includes('Row 1, Column 1'),
+      'Must NOT fall back to arbitrary solution placement at Row 1, Column 1'
+    );
+    assert.ok(hint.steps && hint.steps.length >= 4, 'Must provide structured logical steps');
+    assert.ok(
+      hint.steps.some((s) => s.includes('consume all 6 cats') || s.includes('can contain at most 6 cats')),
+      'Steps must explain the pigeonhole counting principle'
+    );
+  });
 });
 
 
