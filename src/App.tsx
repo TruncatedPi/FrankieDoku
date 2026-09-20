@@ -93,6 +93,7 @@ export function App() {
         onOpenTwoPlayer={() => setIsTwoPlayerOpen(true)}
         onNewFreePlay={() => setIsFreePlayOpen(true)}
         catBreed={activeBreed}
+        theme={settings.theme}
         activeHint={activeHint}
         onDismissHint={handleDismissHint}
       />

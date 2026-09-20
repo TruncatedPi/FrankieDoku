@@ -1,5 +1,6 @@
 import React from 'react';
-import { GameMode, PlayStyle, CatBreed, HintResult } from '../engine/types';
+import { GameMode, PlayStyle, CatBreed, HintResult, ThemePalette } from '../engine/types';
+import { getTerritoryInfo } from '../engine/palettes';
 import { Volume2, VolumeX, Settings, Heart, Calendar, Grid, Download, Users, RefreshCw, Sparkles, X } from 'lucide-react';
 import { CatIcon } from './CatIcon';
 import { APP_VERSION } from '../utils/version';
@@ -22,9 +23,50 @@ interface HeaderProps {
   onOpenTwoPlayer: () => void;
   onNewFreePlay: () => void;
   catBreed?: CatBreed;
+  theme?: ThemePalette;
   activeHint?: HintResult | null;
   onDismissHint?: () => void;
 }
+
+export const FormattedHintText: React.FC<{ text: string; theme?: ThemePalette }> = ({ text, theme }) => {
+  const parts = text.split(/(\[\[territory:\d+:#[0-9a-fA-F]{6}\|[^\]]+\]\])/g);
+  return (
+    <>
+      {parts.map((part, idx) => {
+        const match = part.match(/^\[\[territory:(\d+):(#[0-9a-fA-F]{6})\|([^\]]+)\]\]$/);
+        if (match) {
+          const regIndex = parseInt(match[1], 10);
+          const fallbackHex = match[2];
+          const fallbackLabel = match[3];
+
+          let displayColor = fallbackHex;
+          let displayLabel = fallbackLabel;
+
+          if (theme) {
+            const info = getTerritoryInfo(regIndex, theme);
+            displayColor = info.hex;
+            const isCapital = fallbackLabel.startsWith('Territory');
+            displayLabel = `${isCapital ? 'Territory' : 'territory'} ${info.name}`;
+          }
+
+          return (
+            <span
+              key={idx}
+              style={{
+                color: displayColor,
+                textShadow: '0 0 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
+              }}
+              className="font-extrabold inline-block px-1 py-0.5 rounded bg-black/5 dark:bg-white/10 mx-0.5 align-baseline"
+            >
+              {displayLabel}
+            </span>
+          );
+        }
+        return <React.Fragment key={idx}>{part}</React.Fragment>;
+      })}
+    </>
+  );
+};
 
 export const Header: React.FC<HeaderProps> = ({
   gameMode,
@@ -44,6 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTwoPlayer,
   onNewFreePlay,
   catBreed,
+  theme,
   activeHint,
   onDismissHint,
 }) => {
@@ -239,12 +282,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-300 shrink-0 mt-0.5 fill-amber-400" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-amber-950 dark:text-amber-100 leading-tight">
-                    {activeHint.explanation}
+                    <FormattedHintText text={activeHint.explanation} theme={theme} />
                   </p>
                   {activeHint.steps && activeHint.steps.length > 0 && (
                     <ol className="mt-1 space-y-0.5 pl-3.5 text-[10px] sm:text-[11px] font-medium text-amber-900/90 dark:text-amber-200/90 list-decimal list-outside leading-tight">
                       {activeHint.steps.map((step, idx) => (
-                        <li key={idx}>{step}</li>
+                        <li key={idx}>
+                          <FormattedHintText text={step} theme={theme} />
+                        </li>
                       ))}
                     </ol>
                   )}

@@ -10,6 +10,7 @@ import {
 import { generateDailyPuzzle, generatePuzzle } from './generator';
 import { CAMPAIGN_LEVELS } from '../data/levels';
 import { BoardCell, Puzzle } from './types';
+import { getTerritoryInfo, stripTerritoryTags } from './palettes';
 
 describe('Puzzle Integrity & Contradiction Verification', () => {
   test('All 50 Campaign Levels must be 100% contradiction-free with strictly 1 unique solution', () => {
@@ -358,7 +359,27 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
     assert.ok(hint.steps && hint.steps.length >= 3);
     assert.ok(hint.explanation.length > 0);
     assert.ok(!hint.explanation.includes('cannot be part of a complete solution'));
+
+    // Check cozy theme: Territory 0 is Coral Red (#ef4444)
+    assert.ok(hint.explanation.includes('Territory Coral Red'), 'Hint explanation should refer to Territory Coral Red');
+    assert.ok(hint.explanation.includes('[[territory:0:#ef4444|Territory Coral Red]]'), 'Hint explanation should contain matching color tag');
+    assert.strictEqual(
+      stripTerritoryTags(hint.explanation).includes('[[territory:'),
+      false,
+      'stripTerritoryTags should cleanly remove metadata brackets'
+    );
+
+    // Check theme customization: In midnight theme, Territory 0 is Neon Cyan (#00f0ff)
+    const midnightHint = generateHint(pointingPuzzle, cells, 'midnight');
+    assert.ok(midnightHint);
+    assert.ok(midnightHint.explanation.includes('Territory Neon Cyan'), 'Midnight hint should refer to Territory Neon Cyan');
+    assert.ok(midnightHint.explanation.includes('[[territory:0:#00f0ff|Territory Neon Cyan]]'), 'Midnight hint should contain #00f0ff tag');
+
+    // Ensure no hints use numeric territory values like "Territory 1"
+    assert.ok(!hint.explanation.includes('Territory 1'), 'Must not refer to territory as a numeric value');
+    assert.ok(!midnightHint.explanation.includes('Territory 1'), 'Must not refer to territory as a numeric value in midnight theme');
   });
 });
+
 
 

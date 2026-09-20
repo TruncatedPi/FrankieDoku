@@ -1,5 +1,6 @@
-import { Coordinate, Puzzle, BoardCell, HintResult, HintInvolvedCell } from './types';
+import { Coordinate, Puzzle, BoardCell, HintResult, HintInvolvedCell, ThemePalette } from './types';
 import { assertBoardSize, MIN_SIZE, MAX_SIZE } from './constants';
+import { formatTerritoryTag } from './palettes';
 
 /**
  * Checks if placing a cat at (row, col) is valid given existing placed cats.
@@ -198,12 +199,19 @@ export function getSatisfiedUnits(
   };
 }
 
-function describeCatConflict(a: Coordinate, b: Coordinate, regions: number[][]): string {
+function describeCatConflict(
+  a: Coordinate,
+  b: Coordinate,
+  regions: number[][],
+  theme: ThemePalette = 'cozy'
+): string {
   const parts: string[] = [];
   if (Math.abs(a.row - b.row) <= 1 && Math.abs(a.col - b.col) <= 1) parts.push('touching');
   else if (a.row === b.row) parts.push('same row');
   else if (a.col === b.col) parts.push('same column');
-  else if (regions[a.row][a.col] === regions[b.row][b.col]) parts.push('same territory');
+  else if (regions[a.row][a.col] === regions[b.row][b.col]) {
+    parts.push(`same ${formatTerritoryTag(regions[a.row][a.col], theme)}`);
+  }
   return parts.length > 0 ? parts.join(' and ') : 'rule violation';
 }
 
@@ -223,7 +231,8 @@ function findLineRegionReduction(
   size: number,
   regions: number[][],
   cells: BoardCell[],
-  placedCats: Coordinate[]
+  placedCats: Coordinate[],
+  theme: ThemePalette = 'cozy'
 ): HintResult | null {
   const validCells = cells.filter(
     (c) => c.state === 'empty' && isValidPlacement(c.row, c.col, placedCats, regions)
@@ -243,11 +252,11 @@ function findLineRegionReduction(
           type: 'elimination',
           row: target.row,
           col: target.col,
-          explanation: `All open squares for Territory ${reg + 1} lie in Row ${firstRow + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
+          explanation: `All open squares for ${formatTerritoryTag(reg, theme)} lie in Row ${firstRow + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
           steps: [
-            `In Territory ${reg + 1}, all remaining open squares lie exclusively in Row ${firstRow + 1}.`,
-            `Because Territory ${reg + 1} must contain a cat, that cat must be placed in Row ${firstRow + 1}.`,
-            `Therefore, no other square in Row ${firstRow + 1} outside Territory ${reg + 1} can contain a cat.`,
+            `In ${formatTerritoryTag(reg, theme)}, all remaining open squares lie exclusively in Row ${firstRow + 1}.`,
+            `Because ${formatTerritoryTag(reg, theme)} must contain a cat, that cat must be placed in Row ${firstRow + 1}.`,
+            `Therefore, no other square in Row ${firstRow + 1} outside ${formatTerritoryTag(reg, theme)} can contain a cat.`,
             `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
           ],
           involvedCells: [
@@ -266,11 +275,11 @@ function findLineRegionReduction(
           type: 'elimination',
           row: target.row,
           col: target.col,
-          explanation: `All open squares for Territory ${reg + 1} lie in Column ${firstCol + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
+          explanation: `All open squares for ${formatTerritoryTag(reg, theme)} lie in Column ${firstCol + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
           steps: [
-            `In Territory ${reg + 1}, all remaining open squares lie exclusively in Column ${firstCol + 1}.`,
-            `Because Territory ${reg + 1} must contain a cat, that cat must be placed in Column ${firstCol + 1}.`,
-            `Therefore, no other square in Column ${firstCol + 1} outside Territory ${reg + 1} can contain a cat.`,
+            `In ${formatTerritoryTag(reg, theme)}, all remaining open squares lie exclusively in Column ${firstCol + 1}.`,
+            `Because ${formatTerritoryTag(reg, theme)} must contain a cat, that cat must be placed in Column ${firstCol + 1}.`,
+            `Therefore, no other square in Column ${firstCol + 1} outside ${formatTerritoryTag(reg, theme)} can contain a cat.`,
             `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
           ],
           involvedCells: [
@@ -296,11 +305,11 @@ function findLineRegionReduction(
           type: 'elimination',
           row: target.row,
           col: target.col,
-          explanation: `All open squares in Row ${r + 1} lie in Territory ${firstReg + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
+          explanation: `All open squares in Row ${r + 1} lie in ${formatTerritoryTag(firstReg, theme)}. Mark ${cellName(target.row, target.col)} with an ❌.`,
           steps: [
-            `In Row ${r + 1}, all remaining open squares lie exclusively within Territory ${firstReg + 1}.`,
-            `Because Row ${r + 1} must contain a cat, that cat will be located in Territory ${firstReg + 1}.`,
-            `Therefore, no other square in Territory ${firstReg + 1} outside Row ${r + 1} can contain a cat.`,
+            `In Row ${r + 1}, all remaining open squares lie exclusively within ${formatTerritoryTag(firstReg, theme)}.`,
+            `Because Row ${r + 1} must contain a cat, that cat will be located in ${formatTerritoryTag(firstReg, theme)}.`,
+            `Therefore, no other square in ${formatTerritoryTag(firstReg, theme)} outside Row ${r + 1} can contain a cat.`,
             `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
           ],
           involvedCells: [
@@ -325,11 +334,11 @@ function findLineRegionReduction(
           type: 'elimination',
           row: target.row,
           col: target.col,
-          explanation: `All open squares in Column ${c + 1} lie in Territory ${firstReg + 1}. Mark ${cellName(target.row, target.col)} with an ❌.`,
+          explanation: `All open squares in Column ${c + 1} lie in ${formatTerritoryTag(firstReg, theme)}. Mark ${cellName(target.row, target.col)} with an ❌.`,
           steps: [
-            `In Column ${c + 1}, all remaining open squares lie exclusively within Territory ${firstReg + 1}.`,
-            `Because Column ${c + 1} must contain a cat, that cat will be located in Territory ${firstReg + 1}.`,
-            `Therefore, no other square in Territory ${firstReg + 1} outside Column ${c + 1} can contain a cat.`,
+            `In Column ${c + 1}, all remaining open squares lie exclusively within ${formatTerritoryTag(firstReg, theme)}.`,
+            `Because Column ${c + 1} must contain a cat, that cat will be located in ${formatTerritoryTag(firstReg, theme)}.`,
+            `Therefore, no other square in ${formatTerritoryTag(firstReg, theme)} outside Column ${c + 1} can contain a cat.`,
             `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
           ],
           involvedCells: [
@@ -354,7 +363,8 @@ function findLookaheadContradiction(
   regions: number[][],
   cells: BoardCell[],
   placedCats: Coordinate[],
-  solutionSet: Set<string>
+  solutionSet: Set<string>,
+  theme: ThemePalette = 'cozy'
 ): HintResult | null {
   const emptyNonSol = cells.filter((c) => c.state === 'empty' && !solutionSet.has(`${c.row},${c.col}`));
 
@@ -434,11 +444,11 @@ function findLookaheadContradiction(
           type: 'elimination',
           row: cell.row,
           col: cell.col,
-          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} eliminates all valid spots in Territory ${reg + 1}! Mark this square with an ❌.`,
+          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} eliminates all valid spots in ${formatTerritoryTag(reg, theme)}! Mark this square with an ❌.`,
           steps: [
             `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-            `That cat eliminates all remaining open spots in Territory ${reg + 1}.`,
-            `Every territory must contain exactly one cat, so leaving Territory ${reg + 1} with 0 valid squares is impossible.`,
+            `That cat eliminates all remaining open spots in ${formatTerritoryTag(reg, theme)}.`,
+            `Every territory must contain exactly one cat, so leaving ${formatTerritoryTag(reg, theme)} with 0 valid squares is impossible.`,
             `Conclusion: ${cellName(cell.row, cell.col)} cannot contain a cat. Mark it with an ❌!`,
           ],
           involvedCells: [
@@ -475,11 +485,11 @@ function findLookaheadContradiction(
               type: 'elimination',
               row: cell.row,
               col: cell.col,
-              explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves Territory ${targetReg + 1}! Mark this square with an ❌.`,
+              explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves ${formatTerritoryTag(targetReg, theme)}! Mark this square with an ❌.`,
               steps: [
                 `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-                `In Territory ${reg + 1}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
-                `Placing that forced cat eliminates all remaining open spots in Territory ${targetReg + 1}!`,
+                `In ${formatTerritoryTag(reg, theme)}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
+                `Placing that forced cat eliminates all remaining open spots in ${formatTerritoryTag(targetReg, theme)}!`,
                 `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
               ],
               involvedCells: [
@@ -504,7 +514,7 @@ function findLookaheadContradiction(
               explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves Row ${r + 1}! Mark this square with an ❌.`,
               steps: [
                 `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-                `In Territory ${reg + 1}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
+                `In ${formatTerritoryTag(reg, theme)}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
                 `Placing that forced cat eliminates all remaining open spots in Row ${r + 1}!`,
                 `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
               ],
@@ -530,7 +540,7 @@ function findLookaheadContradiction(
               explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves Column ${c + 1}! Mark this square with an ❌.`,
               steps: [
                 `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-                `In Territory ${reg + 1}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
+                `In ${formatTerritoryTag(reg, theme)}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
                 `Placing that forced cat eliminates all remaining open spots in Column ${c + 1}!`,
                 `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
               ],
@@ -556,7 +566,8 @@ function findLookaheadContradiction(
  */
 export function generateHint(
   puzzle: Puzzle,
-  cells: BoardCell[]
+  cells: BoardCell[],
+  theme: ThemePalette = 'cozy'
 ): HintResult | null {
   const size = puzzle.size;
   const regions = puzzle.regions;
@@ -575,7 +586,7 @@ export function generateHint(
         (c) => !(c.row === cell.row && c.col === cell.col) && !isValidPlacement(cell.row, cell.col, [c], regions)
       );
       if (conflictingCat) {
-        const relation = describeCatConflict(cell, conflictingCat, regions);
+        const relation = describeCatConflict(cell, conflictingCat, regions, theme);
         return {
           type: 'elimination',
           row: cell.row,
@@ -661,10 +672,10 @@ export function generateHint(
             type: 'elimination',
             row: cell.row,
             col: cell.col,
-            explanation: `The cat in ${cellName(cell.row, cell.col)} doesn't belong here! It eliminates all open squares in Territory ${reg + 1}. Remove it to clear the contradiction. 😿`,
+            explanation: `The cat in ${cellName(cell.row, cell.col)} doesn't belong here! It eliminates all open squares in ${formatTerritoryTag(reg, theme)}. Remove it to clear the contradiction. 😿`,
             steps: [
-              `The cat placed at ${cellName(cell.row, cell.col)} eliminates all open squares in Territory ${reg + 1}.`,
-              `Territory ${reg + 1} must contain exactly one cat, but now has 0 valid squares available.`,
+              `The cat placed at ${cellName(cell.row, cell.col)} eliminates all open squares in ${formatTerritoryTag(reg, theme)}.`,
+              `${formatTerritoryTag(reg, theme)} must contain exactly one cat, but now has 0 valid squares available.`,
               `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
             ],
             involvedCells: [
@@ -710,7 +721,7 @@ export function generateHint(
         explanation: `The ❌ in ${cellName(sol.row, sol.col)} was placed by mistake! A happy cat belongs here. 🐱`,
         steps: [
           `The square at ${cellName(sol.row, sol.col)} was marked with an ❌ by mistake.`,
-          `Without this square, Territory ${reg + 1} has no remaining valid squares that complete the puzzle.`,
+          `Without this square, ${formatTerritoryTag(reg, theme)} has no remaining valid squares that complete the puzzle.`,
           `Conclusion: Clear the ❌ at ${cellName(sol.row, sol.col)} — a cat belongs right here!`,
         ],
         involvedCells: [
@@ -732,7 +743,7 @@ export function generateHint(
     if (cell.state !== 'empty') continue;
     const blocker = placedCats.find((cat) => !isValidPlacement(cell.row, cell.col, [cat], regions));
     if (blocker) {
-      const relation = describeCatConflict(cell, blocker, regions);
+      const relation = describeCatConflict(cell, blocker, regions, theme);
       return {
         type: 'elimination',
         row: cell.row,
@@ -832,9 +843,9 @@ export function generateHint(
           type: 'placement',
           row: target.row,
           col: target.col,
-          explanation: `In colored Territory ${reg + 1}, all other squares are blocked or eliminated. Only this square remains open for a cat!`,
+          explanation: `In ${formatTerritoryTag(reg, theme)}, all other squares are blocked or eliminated. Only this square remains open for a cat!`,
           steps: [
-            `Inspect Territory ${reg + 1}: all other squares are marked with ❌ or blocked by existing rules.`,
+            `Inspect ${formatTerritoryTag(reg, theme)}: all other squares are marked with ❌ or blocked by existing rules.`,
             `Every colored territory must contain exactly one cat.`,
             `Conclusion: Place a cat at ${cellName(target.row, target.col)}!`,
           ],
@@ -854,13 +865,13 @@ export function generateHint(
   }
 
   // 7. Line-Region Interaction (Pointing & Claiming reductions)
-  const lineReduction = findLineRegionReduction(size, regions, cells, placedCats);
+  const lineReduction = findLineRegionReduction(size, regions, cells, placedCats, theme);
   if (lineReduction) {
     return lineReduction;
   }
 
   // 8. Lookahead Contradiction & Multi-Step Forcing Chains
-  const lookaheadHint = findLookaheadContradiction(size, regions, cells, placedCats, solutionSet);
+  const lookaheadHint = findLookaheadContradiction(size, regions, cells, placedCats, solutionSet, theme);
   if (lookaheadHint) {
     return lookaheadHint;
   }
@@ -880,7 +891,7 @@ export function generateHint(
           col: sol.col,
           explanation: `A happy cat belongs right here in ${cellName(sol.row, sol.col)}! 🐱`,
           steps: [
-            `Examine ${cellName(sol.row, sol.col)} inside Territory ${reg + 1}.`,
+            `Examine ${cellName(sol.row, sol.col)} inside ${formatTerritoryTag(reg, theme)}.`,
             `Placing a cat here maintains the unique, valid solution across all rows, columns, and territories.`,
             `Conclusion: Place a cat at ${cellName(sol.row, sol.col)}!`,
           ],

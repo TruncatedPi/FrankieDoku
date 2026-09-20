@@ -121,7 +121,7 @@ export function useGameState() {
   }, [game]);
   const handleHint = () => {
     if (isGenerating || game.isWon || game.isGameOver) return;
-    const hint = generateHint(currentPuzzle, game.cells);
+    const hint = generateHint(currentPuzzle, game.cells, settings.theme);
     if (hint) { setActiveHint(hint); dispatch({ type: 'hint', hint }); sound.playHint(); sound.triggerHaptic('medium'); }
   };
   const satisfied = useMemo(() => getSatisfiedUnits(game.cells, currentPuzzle.size, currentPuzzle.regions), [game.cells, currentPuzzle]);
