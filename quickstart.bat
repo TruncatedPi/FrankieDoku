@@ -41,16 +41,32 @@ if not exist "node_modules\" (
     echo.
 )
 
-:: 3. Process arguments (preview / build / dev)
+:: 3. Detect LAN IP for mobile access (Pixel 9 / phone on local Wi-Fi)
+set "LAN_IP="
+for /f "tokens=*" %%A in ('node -e "const os=require('os'); const nets=os.networkInterfaces(); for(const name of Object.keys(nets)){ if(/vEthernet|wsl|loopback|virtual/i.test(name)) continue; for(const net of nets[name]){ if((net.family==='IPv4' || net.family===4) && !net.internal && !net.address.startsWith('169.254')) { console.log(net.address); process.exit(0); } } }" 2^>nul') do (
+    set "LAN_IP=%%A"
+)
+
+:: 4. Process arguments (preview / build / dev)
 if /i "%~1"=="build" goto do_build
 if /i "%~1"=="preview" goto do_preview
 
 :do_dev
-echo [INFO] Launching Vite Development Server...
-echo   * Local URL:   http://localhost:3000/
-echo   * Mobile URL:  Check the Network IP address displayed below (e.g. for Pixel 9)
+set "PORT=3000"
+echo =======================================================
+echo   🐱 SchroDoku URLs to Use:
+echo =======================================================
+echo   * Desktop Browser:  http://localhost:%PORT%/
+if defined LAN_IP (
+    echo   * Pixel 9 / Phone:  http://!LAN_IP!:%PORT%/
+) else (
+    echo   * Pixel 9 / Phone:  (Connect phone to local Wi-Fi)
+)
+echo =======================================================
 echo.
-start "" http://localhost:3000/
+echo Opening browser at http://localhost:%PORT%/ ...
+start "" "http://localhost:%PORT%/"
+echo.
 call npm run dev
 if %errorlevel% neq 0 (
     echo.
@@ -73,6 +89,7 @@ pause
 exit /b 0
 
 :do_preview
+set "PORT=4173"
 if not exist "dist\" (
     echo [INFO] dist\ folder not found. Building first...
     call npm run build
@@ -83,12 +100,21 @@ if not exist "dist\" (
     )
     echo.
 )
-echo [INFO] Launching Production Preview Server...
-echo   * Local URL:   http://localhost:4173/
-echo   * Mobile URL:  Check the Network IP address displayed below
+echo =======================================================
+echo   🐱 SchroDoku Preview URLs to Use:
+echo =======================================================
+echo   * Desktop Browser:  http://localhost:%PORT%/
+if defined LAN_IP (
+    echo   * Pixel 9 / Phone:  http://!LAN_IP!:%PORT%/
+) else (
+    echo   * Pixel 9 / Phone:  (Connect phone to local Wi-Fi)
+)
+echo =======================================================
 echo.
-start "" http://localhost:4173/
-call npm run preview -- --host 0.0.0.0 --port 4173
+echo Opening browser at http://localhost:%PORT%/ ...
+start "" "http://localhost:%PORT%/"
+echo.
+call npm run preview -- --host 0.0.0.0 --port %PORT%
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Preview server exited with error code %errorlevel%.

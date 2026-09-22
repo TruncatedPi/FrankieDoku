@@ -1,8 +1,55 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 import { execSync } from 'node:child_process';
+import os from 'node:os';
+
+function getLanIp(): string | undefined {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    if (/vEthernet|wsl|loopback|virtual|docker/i.test(name)) continue;
+    const list = nets[name];
+    if (!list) continue;
+    for (const net of list) {
+      if ((net.family === 'IPv4' || (net.family as unknown) === 4) && !net.internal && !net.address.startsWith('169.254')) {
+        return net.address;
+      }
+    }
+  }
+  return undefined;
+}
+
+function lanUrlPlugin(): Plugin {
+  const printBanner = (port: number, mode: string) => {
+    const lanIp = getLanIp();
+    console.log('\n  ======================================================');
+    console.log(`  🐱 SchroDoku URLs to Use (${mode}):`);
+    console.log(`     🖥️  Desktop Browser:  http://localhost:${port}/`);
+    if (lanIp) {
+      console.log(`     📱  Pixel 9 / Phone:  http://${lanIp}:${port}/`);
+    }
+    console.log('  ======================================================\n');
+  };
+
+  return {
+    name: 'lan-url-banner',
+    configureServer(server) {
+      server.httpServer?.once('listening', () => {
+        const address = server.httpServer?.address();
+        const port = typeof address === 'object' && address ? address.port : 3000;
+        setTimeout(() => printBanner(port, 'Development'), 150);
+      });
+    },
+    configurePreviewServer(server) {
+      server.httpServer?.once('listening', () => {
+        const address = server.httpServer?.address();
+        const port = typeof address === 'object' && address ? address.port : 4173;
+        setTimeout(() => printBanner(port, 'Preview'), 150);
+      });
+    }
+  };
+}
 
 function getCommitDate(): string {
   try {
@@ -52,6 +99,7 @@ export default defineConfig({
   base: './',
   plugins: [
     react(),
+    lanUrlPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png', 'cat-icon.svg'],
