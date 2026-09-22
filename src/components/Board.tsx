@@ -150,7 +150,7 @@ export const Board: React.FC<BoardProps> = ({
       }}
     >
       <div
-        className="w-full h-full grid rounded-2xl overflow-hidden shadow-inner border-2 border-slate-700/60 dark:border-slate-300/40"
+        className="w-full h-full grid rounded-2xl overflow-hidden shadow-inner border-2 border-black dark:border-black"
         style={{
           gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
@@ -223,10 +223,10 @@ export const Board: React.FC<BoardProps> = ({
                 borderBottomWidth: hasBottomBorder ? '2.5px' : '0.5px',
                 borderLeftWidth: hasLeftBorder ? '2.5px' : '0.5px',
                 borderRightWidth: hasRightBorder ? '2.5px' : '0.5px',
-                borderTopColor: hasTopBorder ? '#334155' : 'rgba(100, 116, 139, 0.25)',
-                borderBottomColor: hasBottomBorder ? '#334155' : 'rgba(100, 116, 139, 0.25)',
-                borderLeftColor: hasLeftBorder ? '#334155' : 'rgba(100, 116, 139, 0.25)',
-                borderRightColor: hasRightBorder ? '#334155' : 'rgba(100, 116, 139, 0.25)',
+                borderTopColor: hasTopBorder ? '#000000' : '#000000',
+                borderBottomColor: hasBottomBorder ? '#000000' : '#000000',
+                borderLeftColor: hasLeftBorder ? '#000000' : '#000000',
+                borderRightColor: hasRightBorder ? '#000000' : '#000000',
               }}
             >
               {/* Placed Cat Sprite */}
