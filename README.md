@@ -47,7 +47,10 @@ A portable, cross-platform, ad-free recreation of the beloved **Meowdoku** (Star
 
 ## 🚀 Running on Windows
 
-### Quick Start (Dev Server)
+### Quick Start (.BAT)
+Double-click `quickstart.bat` in the project folder to automatically install dependencies (if missing), start the server, and open the game in your browser!
+
+### Quick Start (Command Line)
 ```bash
 npm install
 npm run dev
