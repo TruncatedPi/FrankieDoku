@@ -58,3 +58,68 @@ test('even zero growth budget produces a unique map, and unsupported input is re
   assert.throws(() => generatePuzzle(12, NaN), /Seed/);
   for (const date of ['2026-02-30', 'bad', '2026-9-5']) assert.throws(() => generateDailyPuzzle(date));
 });
+
+test('mark color placement, switching between black and red, and undo/redo', () => {
+  let game = newGame(map, 'campaign');
+  // Place black mark on cell (0, 0)
+  game = gameReducer(game, {
+    type: 'move',
+    row: 0,
+    col: 0,
+    action: 'tap',
+    inputMode: 'mark',
+    markColor: 'black',
+    settings: DEFAULT_SETTINGS,
+  });
+  assert.equal(game.cells[0].state, 'mark');
+  assert.equal(game.cells[0].markColor, 'black');
+
+  // Tap again with markColor 'red': switches to red mark without clearing
+  game = gameReducer(game, {
+    type: 'move',
+    row: 0,
+    col: 0,
+    action: 'tap',
+    inputMode: 'mark',
+    markColor: 'red',
+    settings: DEFAULT_SETTINGS,
+  });
+  assert.equal(game.cells[0].state, 'mark');
+  assert.equal(game.cells[0].markColor, 'red');
+
+  // Tap again with markColor 'red': clears to empty
+  game = gameReducer(game, {
+    type: 'move',
+    row: 0,
+    col: 0,
+    action: 'tap',
+    inputMode: 'mark',
+    markColor: 'red',
+    settings: DEFAULT_SETTINGS,
+  });
+  assert.equal(game.cells[0].state, 'empty');
+  assert.equal(game.cells[0].markColor, undefined);
+
+  // Undo clears back to red mark
+  game = gameReducer(game, { type: 'undo' });
+  assert.equal(game.cells[0].state, 'mark');
+  assert.equal(game.cells[0].markColor, 'red');
+
+  // Redo clears again
+  game = gameReducer(game, { type: 'redo' });
+  assert.equal(game.cells[0].state, 'empty');
+
+  // Drag with markColor 'red' on empty cell (0, 1) places red mark
+  game = gameReducer(game, {
+    type: 'move',
+    row: 0,
+    col: 1,
+    action: 'drag',
+    inputMode: 'mark',
+    markColor: 'red',
+    settings: DEFAULT_SETTINGS,
+  });
+  assert.equal(game.cells[1].state, 'mark');
+  assert.equal(game.cells[1].markColor, 'red');
+});
+

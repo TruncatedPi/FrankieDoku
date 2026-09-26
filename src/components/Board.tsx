@@ -193,12 +193,13 @@ export const Board: React.FC<BoardProps> = ({
             <button
               key={`${cell.row}-${cell.col}`}
               type="button"
-              aria-label={`Row ${cell.row + 1}, Col ${cell.col + 1}, Region ${reg + 1}, ${cell.state}`}
+              aria-label={`Row ${cell.row + 1}, Col ${cell.col + 1}, Region ${reg + 1}, ${cell.state}${cell.state === 'mark' && cell.markColor ? ` (${cell.markColor})` : ''}`}
               disabled={disabled}
               data-cell="true"
               data-row={cell.row}
               data-col={cell.col}
               data-state={cell.state}
+              data-mark-color={cell.markColor ?? 'black'}
               data-player={cell.player}
               onClick={e => { if (e.detail === 0) onCellAction(cell.row, cell.col, 'tap'); }}
               onPointerDown={(e) => handlePointerDown(cell.row, cell.col, e)}
@@ -265,13 +266,13 @@ export const Board: React.FC<BoardProps> = ({
                     {/* High-contrast crisp white outline/backdrop stroke */}
                     <line x1="18" y1="6" x2="6" y2="18" stroke="#ffffff" strokeWidth="5.5" />
                     <line x1="6" y1="6" x2="18" y2="18" stroke="#ffffff" strokeWidth="5.5" />
-                    {/* Inner stroke: Vibrant Red if mistake, Dark Slate if normal elimination mark */}
+                    {/* Inner stroke: Vibrant Red if mistake or red mark, Dark Slate if normal black mark */}
                     <line
                       x1="18"
                       y1="6"
                       x2="6"
                       y2="18"
-                      stroke={cell.isMistake ? '#ef4444' : '#0f172a'}
+                      stroke={cell.isMistake || cell.markColor === 'red' ? '#ef4444' : '#0f172a'}
                       strokeWidth="3.2"
                     />
                     <line
@@ -279,7 +280,7 @@ export const Board: React.FC<BoardProps> = ({
                       y1="6"
                       x2="18"
                       y2="18"
-                      stroke={cell.isMistake ? '#ef4444' : '#0f172a'}
+                      stroke={cell.isMistake || cell.markColor === 'red' ? '#ef4444' : '#0f172a'}
                       strokeWidth="3.2"
                     />
                   </svg>

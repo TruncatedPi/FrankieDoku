@@ -27,6 +27,7 @@ export interface BoardCell {
   player?: 1 | 2;
   isHinted?: boolean;
   isMistake?: boolean;
+  markColor?: 'black' | 'red';
 }
 
 export interface Move {
@@ -39,6 +40,8 @@ export interface Move {
   player?: 1 | 2; // For two-player pass-and-play
   prevPlayer?: 1 | 2;
   prevMistake?: boolean;
+  markColor?: 'black' | 'red';
+  prevMarkColor?: 'black' | 'red';
 }
 
 export interface TwoPlayerConfig {

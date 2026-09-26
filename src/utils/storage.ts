@@ -88,12 +88,15 @@ export function loadSavedSession(): GameSession | null {
   const state = (s: unknown) => ['empty', 'cat', 'mark'].includes(s as string);
   const coordinate = (q: unknown): q is { row: number; col: number } => record(q) && count(q.row) && count(q.col) && q.row < size && q.col < size;
   const player = (p: unknown) => p === undefined || p === 1 || p === 2;
+  const validMarkColor = (m: unknown) => m === undefined || m === 'black' || m === 'red';
   for (let i = 0; i < game.cells.length; i++) {
     const cell = game.cells[i];
     if (!coordinate(cell) || cell.row !== Math.floor(i / size) || cell.col !== i % size ||
-        cell.region !== game.puzzle.regions[cell.row][cell.col] || !state(cell.state) || !player(cell.player)) return null;
+        cell.region !== game.puzzle.regions[cell.row][cell.col] || !state(cell.state) || !player(cell.player) ||
+        !validMarkColor(cell.markColor)) return null;
   }
   const validMove = (move: Move) => coordinate(move) && state(move.prevState) && state(move.newState) && player(move.player) && player(move.prevPlayer) &&
+    validMarkColor(move.markColor) && validMarkColor(move.prevMarkColor) &&
     (move.autoCrossed === undefined || (Array.isArray(move.autoCrossed) && move.autoCrossed.length <= size * size && move.autoCrossed.every(c => coordinate(c) && state(c.prevState))));
   if (![game.history, game.redoStack].every(stack => Array.isArray(stack) && stack.length <= 10000 && stack.every(validMove))) return null;
   return evaluateGame({ ...game, twoPlayerConfig: game.gameMode === 'twoplayer' ? game.twoPlayerConfig : null });

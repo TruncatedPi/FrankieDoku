@@ -143,3 +143,34 @@ test('hint overlays menu area without jumping the board and displays logical ste
   await expect(page.getByRole('button', { name: 'Levels', exact: true })).toBeVisible();
 });
 
+test('mark toggle switches between black and red X and persists on placed marks', async ({ page }) => {
+  await page.goto('./');
+  const toggle = page.getByRole('button', { name: /Toggle between Red X and Black X/i });
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveText(/Black X/i);
+
+  // Switch to Red X
+  await toggle.click();
+  await expect(toggle).toHaveText(/Red X/i);
+
+  // Tap cell (0, 0)
+  const cell = page.locator('[data-row="0"][data-col="0"]');
+  await cell.click();
+  await expect(cell).toHaveAttribute('data-state', 'mark');
+  await expect(cell).toHaveAttribute('data-mark-color', 'red');
+
+  // Switch back to Black X
+  await toggle.click();
+  await expect(toggle).toHaveText(/Black X/i);
+
+  // Tap cell (0, 0): since it was red and we're now in black mode, it switches color to black
+  await cell.click();
+  await expect(cell).toHaveAttribute('data-state', 'mark');
+  await expect(cell).toHaveAttribute('data-mark-color', 'black');
+
+  // Tap cell (0, 0) again: in black mode on black mark, it clears to empty
+  await cell.click();
+  await expect(cell).toHaveAttribute('data-state', 'empty');
+});
+
+

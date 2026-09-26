@@ -17,6 +17,21 @@ export function useGameState() {
   const [restored] = useState(loadSavedSession);
   const [game, dispatch] = useReducer(gameReducer, restored, session => session ?? newGame(CAMPAIGN_LEVELS[0], 'campaign'));
   const [inputMode, setInputMode] = useState<InputMode>('mark');
+  const [markColor, setMarkColor] = useState<'black' | 'red'>(() => {
+    try {
+      const stored = localStorage.getItem('frankiedoku_mark_color');
+      return stored === 'red' ? 'red' : 'black';
+    } catch {
+      return 'black';
+    }
+  });
+  const handleToggleMarkColor = useCallback(() => {
+    setMarkColor(prev => {
+      const next = prev === 'black' ? 'red' : 'black';
+      try { localStorage.setItem('frankiedoku_mark_color', next); } catch {}
+      return next;
+    });
+  }, []);
   const [activeHint, setActiveHint] = useState<HintResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -108,7 +123,7 @@ export function useGameState() {
   const handleCellAction = (row: number, col: number, action: CellAction) => {
     if (isGenerating || game.isWon || game.isGameOver) return;
     setActiveHint(null);
-    dispatch({ type: 'move', row, col, action, inputMode, settings });
+    dispatch({ type: 'move', row, col, action, inputMode, settings, markColor });
   };
   const previousGame = useRef(game);
   useEffect(() => {
@@ -129,7 +144,7 @@ export function useGameState() {
   const hasNextLevel = game.gameMode === 'campaign' && nextIndex > 0 && nextIndex < CAMPAIGN_LEVELS.length;
   return {
     settings, stats, campaignProgress, dailyProgress, ...game, currentPuzzle, currentLevel,
-    inputMode, setInputMode, maxHearts: 3, activeHint, isGenerating, generationError,
+    inputMode, setInputMode, markColor, handleToggleMarkColor, maxHearts: 3, activeHint, isGenerating, generationError,
     satisfiedRows: satisfied.rows, satisfiedCols: satisfied.cols, satisfiedRegions: satisfied.regions,
     remainingCats: Math.max(0, currentPuzzle.size - game.cells.filter(c => c.state === 'cat').length),
     handleCellAction, handleHint,

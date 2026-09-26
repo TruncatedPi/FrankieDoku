@@ -44,7 +44,7 @@ export type GameAction =
   | { type: 'hint'; hint: HintResult }
   | { type: 'dismissHint' }
   | { type: 'undo' | 'redo' }
-  | { type: 'move'; row: number; col: number; action: CellAction; inputMode: InputMode; settings: UserSettings };
+  | { type: 'move'; row: number; col: number; action: CellAction; inputMode: InputMode; settings: UserSettings; markColor?: 'black' | 'red' };
 
 export function gameReducer(game: GameSession, action: GameAction): GameSession {
   if (action.type === 'start') return action.game;
@@ -62,10 +62,11 @@ export function gameReducer(game: GameSession, action: GameAction): GameSession 
         state: undo ? move.prevState : move.newState,
         isMistake: undo ? move.prevMistake : move.isMistake,
         player: undo ? move.prevPlayer : move.newState === 'cat' ? move.player : undefined,
+        markColor: undo ? move.prevMarkColor : move.markColor,
         isHinted: false,
       };
       const crossed = move.autoCrossed?.find(c => c.row === cell.row && c.col === cell.col);
-      return crossed ? { ...cell, state: undo ? crossed.prevState : 'mark' as CellState, isHinted: false } : cell;
+      return crossed ? { ...cell, state: undo ? crossed.prevState : ('mark' as CellState), markColor: undo ? undefined : ('black' as const), isHinted: false } : cell;
     });
     return evaluateGame({ ...game, cells,
       history: undo ? game.history.slice(0, -1) : [...game.history, move],
@@ -74,7 +75,7 @@ export function gameReducer(game: GameSession, action: GameAction): GameSession 
     });
   }
   if (action.type !== 'move') return game;
-  const { row, col, settings } = action;
+  const { row, col, settings, markColor = 'black' } = action;
   const cell = game.cells.find(c => c.row === row && c.col === col);
   if (!cell) return game;
   let target: CellState;
@@ -83,7 +84,18 @@ export function gameReducer(game: GameSession, action: GameAction): GameSession 
     target = 'mark';
   } else if (action.action === 'cat' || action.action === 'doubleTap' || (action.action === 'tap' && action.inputMode === 'cat')) {
     target = cell.state === 'cat' ? 'empty' : 'cat';
-  } else target = cell.state === 'mark' ? 'empty' : 'mark';
+  } else {
+    if (cell.state === 'mark') {
+      const current = cell.markColor ?? 'black';
+      if (current !== markColor && !cell.isMistake) {
+        target = 'mark';
+      } else {
+        target = 'empty';
+      }
+    } else {
+      target = 'mark';
+    }
+  }
   let mistake = false;
   let hearts = game.hearts;
   let crossed: Move['autoCrossed'];
@@ -99,13 +111,15 @@ export function gameReducer(game: GameSession, action: GameAction): GameSession 
         .map(q => ({ ...q, prevState: 'empty' }));
     }
   }
+  const nextMarkColor = target === 'mark' ? (mistake ? 'red' : markColor) : undefined;
   const player = game.gameMode === 'twoplayer' ? game.currentPlayer : undefined;
   const move: Move = { row, col, prevState: cell.state, newState: target, prevMistake: cell.isMistake,
-    isMistake: mistake, prevPlayer: cell.player, player, autoCrossed: crossed };
+    isMistake: mistake, prevPlayer: cell.player, player, autoCrossed: crossed,
+    markColor: nextMarkColor, prevMarkColor: cell.markColor };
   const crossedKeys = new Set(crossed?.map(c => c.row * game.puzzle.size + c.col));
   const cells = game.cells.map(c => {
-    if (c.row === row && c.col === col) return { ...c, state: target, isMistake: mistake, isHinted: false, player: target === 'cat' ? player : undefined };
-    return crossedKeys.has(c.row * game.puzzle.size + c.col) ? { ...c, state: 'mark' as CellState, isHinted: false } : c;
+    if (c.row === row && c.col === col) return { ...c, state: target, isMistake: mistake, markColor: nextMarkColor, isHinted: false, player: target === 'cat' ? player : undefined };
+    return crossedKeys.has(c.row * game.puzzle.size + c.col) ? { ...c, state: 'mark' as CellState, markColor: 'black' as const, isHinted: false } : c;
   });
   return evaluateGame({ ...game, cells, hearts, history: [...game.history, move], redoStack: [],
     currentPlayer: player && target === 'cat' ? player === 1 ? 2 : 1 : game.currentPlayer });

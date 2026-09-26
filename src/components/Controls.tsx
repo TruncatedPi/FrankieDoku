@@ -6,6 +6,8 @@ import { CatIcon } from './CatIcon';
 interface ControlsProps {
   inputMode: InputMode;
   onSetInputMode: (mode: InputMode) => void;
+  markColor: 'black' | 'red';
+  onToggleMarkColor: () => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -19,6 +21,8 @@ interface ControlsProps {
 export const Controls: React.FC<ControlsProps> = ({
   inputMode,
   onSetInputMode,
+  markColor,
+  onToggleMarkColor,
   canUndo,
   canRedo,
   onUndo,
@@ -32,20 +36,55 @@ export const Controls: React.FC<ControlsProps> = ({
     <div className="w-full max-w-[min(94vw,480px)] mx-auto mt-1 sm:mt-2 px-2 flex flex-col gap-1.5 sm:gap-2.5 select-none shrink-0">
       {/* Primary Input Mode Toggle (Single-tap friendly for phones & tablets) */}
       <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-slate-200/60 dark:border-white/10 shadow-sm">
-        <button
-          type="button"
-          onClick={() => onSetInputMode('mark')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 px-3 rounded-xl font-bold text-sm transition-all duration-200 ${
+        <div
+          className={`flex-1 flex items-center justify-between gap-1 py-1 px-2 rounded-xl font-bold text-sm transition-all duration-200 ${
             inputMode === 'mark'
-              ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-100 shadow-sm ring-2 ring-amber-400/80 scale-[1.02]'
+              ? markColor === 'red'
+                ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-900 dark:text-rose-100 shadow-sm ring-2 ring-rose-400/80 scale-[1.02]'
+                : 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-100 shadow-sm ring-2 ring-amber-400/80 scale-[1.02]'
               : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/60 dark:hover:bg-white/5'
           }`}
         >
-          <div className="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200">
-            <X className="w-4 h-4 stroke-[2.5]" />
-          </div>
-          <span>Mark ❌</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => onSetInputMode('mark')}
+            className="flex-1 flex items-center gap-1.5 py-1 text-left outline-none cursor-pointer"
+          >
+            <div
+              className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                markColor === 'red'
+                  ? 'bg-rose-200 dark:bg-rose-900/80 text-rose-600 dark:text-rose-300'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100'
+              }`}
+            >
+              <X className="w-4 h-4 stroke-[3]" />
+            </div>
+            <span className="text-xs sm:text-sm font-bold">Mark</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleMarkColor();
+              if (inputMode !== 'mark') onSetInputMode('mark');
+            }}
+            title={`Switch to ${markColor === 'black' ? 'Red' : 'Black'} X`}
+            aria-label={`Mark color is ${markColor}. Toggle between Red X and Black X.`}
+            className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 active:scale-95 shadow-sm cursor-pointer ${
+              markColor === 'red'
+                ? 'bg-rose-500 hover:bg-rose-600 text-white ring-1 ring-rose-400'
+                : 'bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white ring-1 ring-slate-600'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                markColor === 'red' ? 'bg-white' : 'bg-slate-300'
+              }`}
+            />
+            <span>{markColor === 'red' ? 'Red X' : 'Black X'}</span>
+          </button>
+        </div>
 
         <button
           type="button"

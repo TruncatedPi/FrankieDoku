@@ -52,3 +52,21 @@ test('winning a past daily records that date once, and a restored victory is not
   assert.ok(api.stats.currentDailyStreak <= 1);
   await act(async () => renderer.unmount());
 });
+
+test('markColor toggles and persists to localStorage', async () => {
+  let api!: ReturnType<typeof useGameState>, renderer!: ReactTestRenderer;
+  function Harness() { api = useGameState(); return null; }
+  await act(async () => { renderer = create(createElement(Harness)); });
+  assert.equal(api.markColor, 'black');
+
+  await act(async () => { api.handleToggleMarkColor(); });
+  assert.equal(api.markColor, 'red');
+  assert.equal(data.get('frankiedoku_mark_color'), 'red');
+
+  await act(async () => { api.handleToggleMarkColor(); });
+  assert.equal(api.markColor, 'black');
+  assert.equal(data.get('frankiedoku_mark_color'), 'black');
+
+  await act(async () => renderer.unmount());
+});
+

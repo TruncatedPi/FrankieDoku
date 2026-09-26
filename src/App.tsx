@@ -26,6 +26,8 @@ export function App() {
     cells,
     inputMode,
     setInputMode,
+    markColor,
+    handleToggleMarkColor,
     hearts,
     maxHearts,
     timerSeconds,
@@ -144,6 +146,8 @@ export function App() {
         <Controls
           inputMode={inputMode}
           onSetInputMode={setInputMode}
+          markColor={markColor}
+          onToggleMarkColor={handleToggleMarkColor}
           canUndo={history.length > 0}
           canRedo={redoStack.length > 0}
           onUndo={handleUndo}
