@@ -159,6 +159,18 @@ export const Board: React.FC<BoardProps> = ({
       >
         {cells.map((cell) => {
           const reg = cell.region;
+          if (reg === -1) {
+            return (
+              <div
+                key={`${cell.row}-${cell.col}`}
+                data-cell="void"
+                data-row={cell.row}
+                data-col={cell.col}
+                className="pointer-events-none select-none bg-black/5 dark:bg-black/25"
+                aria-hidden="true"
+              />
+            );
+          }
           const bgCol = palette[reg % palette.length];
 
           const isPrimaryHint = Boolean(activeHint && activeHint.row === cell.row && activeHint.col === cell.col);

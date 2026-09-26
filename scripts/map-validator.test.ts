@@ -42,7 +42,7 @@ test('checker and production validator reject malformed maps without throwing', 
     { ...unique, regions: [[0], ...unique.regions.slice(1)] }, disconnected,
     { ...unique, regions: Array.from({ length: 4 }, () => [0, 0, 0, 0]) },
   ];
-  for (const badIndex of [NaN, Infinity, -1, 4, 1.5, '0', null, undefined]) {
+  for (const badIndex of [NaN, Infinity, -2, 4, 1.5, '0', null, undefined]) {
     cases.push({ ...unique, regions: [[badIndex, ...unique.regions[0].slice(1)], ...unique.regions.slice(1)] });
   }
   for (const input of cases) {
