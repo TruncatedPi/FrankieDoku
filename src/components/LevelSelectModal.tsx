@@ -11,7 +11,7 @@ interface LevelSelectModalProps {
   onSelectLevel: (level: CampaignLevel) => void;
 }
 
-type TierName = 'Kitten' | 'Playful' | 'Clever' | 'Master' | 'Explorer' | 'Adventurer' | 'Champion' | 'Legend' | 'Grandmaster' | 'Phantom' | 'Eclipse';
+type TierName = 'Kitten' | 'Playful' | 'Clever' | 'Master' | 'Explorer' | 'Adventurer' | 'Champion' | 'Legend' | 'Grandmaster';
 
 const TIERS: { name: TierName; label: string; badge: string }[] = [
   { name: 'Kitten', label: 'Tier 1: Kitten (4x4-5x5)', badge: '🐾' },
@@ -23,8 +23,6 @@ const TIERS: { name: TierName; label: string; badge: string }[] = [
   { name: 'Champion', label: 'Tier 7: Champion (10x10)', badge: '🏆' },
   { name: 'Legend', label: 'Tier 8: Legend (11x11)', badge: '🌟' },
   { name: 'Grandmaster', label: 'Tier 9: Grandmaster (12x12)', badge: '💎' },
-  { name: 'Phantom', label: 'Tier 10: Phantom (1 Void/Line)', badge: '👻' },
-  { name: 'Eclipse', label: 'Tier 11: Eclipse (2 Voids/Line)', badge: '🌑' },
 ];
 
 export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
@@ -61,7 +59,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                 Campaign Levels
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                120 Crafted Logic Puzzles
+                100 Crafted Logic Puzzles
               </p>
             </div>
           </div>

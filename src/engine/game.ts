@@ -76,7 +76,7 @@ export function gameReducer(game: GameSession, action: GameAction): GameSession 
   if (action.type !== 'move') return game;
   const { row, col, settings } = action;
   const cell = game.cells.find(c => c.row === row && c.col === col);
-  if (!cell || cell.region === -1) return game;
+  if (!cell) return game;
   let target: CellState;
   if (action.action === 'drag') {
     if (cell.state !== 'empty') return game;

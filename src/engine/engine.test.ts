@@ -84,10 +84,10 @@ describe('Meowdoku Engine & Rules', () => {
   });
 
   test('Campaign levels verification', () => {
-    assert.strictEqual(CAMPAIGN_LEVELS.length, 120, 'Must have exactly 120 campaign levels');
+    assert.strictEqual(CAMPAIGN_LEVELS.length, 100, 'Must have exactly 100 campaign levels');
 
     // Test a sample of levels across tiers
-    const sampleIndices = [0, 9, 15, 24, 30, 39, 45, 49, 55, 65, 75, 85, 95, 99, 105, 115];
+    const sampleIndices = [0, 9, 15, 24, 30, 39, 45, 49, 55, 65, 75, 85, 95, 99];
     for (const idx of sampleIndices) {
       const lvl = CAMPAIGN_LEVELS[idx];
       assert.ok(lvl.size >= 4 && lvl.size <= 12);

@@ -26,7 +26,6 @@ export function validateMap(input: unknown, maxNodes = 1_000_000): MapValidation
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
       const region = regions[row][col];
-      if (region === -1) continue; // void/missing cell
       if (!Number.isInteger(region) || region < 0 || region >= size) {
         return fail(`Invalid region at (${row},${col}): ${region}`);
       }
@@ -63,7 +62,7 @@ export function validateMap(input: unknown, maxNodes = 1_000_000): MapValidation
           result.errors.push(`Stored solution has invalid coordinate at index ${i}`);
           break;
         }
-        if (regions[q.row][q.col] === -1 || solution.slice(0, i).some(p =>
+        if (solution.slice(0, i).some(p =>
           p.row === q.row || p.col === q.col || regions[p.row][p.col] === regions[q.row][q.col] ||
           (Math.abs(p.row - q.row) <= 1 && Math.abs(p.col - q.col) <= 1))) {
           result.errors.push(`Stored solution violates the rules at (${q.row},${q.col})`);

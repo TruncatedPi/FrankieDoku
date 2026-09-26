@@ -105,7 +105,7 @@ try {
     if (!maps.length) throw new Error('Input map list must not be empty');
     maps.forEach((map, index) => check(`file[${index}]`, 'file', () => map));
   } else {
-    if (CAMPAIGN_LEVELS.length !== 120) throw new Error('Expected 120 campaign maps');
+    if (CAMPAIGN_LEVELS.length !== 100) throw new Error('Expected 100 campaign maps');
     CAMPAIGN_LEVELS.forEach(map => check(map.id, 'campaign', () => map));
     check('daily-fallback', 'fallback', () => createDailyFallbackPuzzle('fallback'));
     for (let day = 0; day < days; day++) {

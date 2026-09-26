@@ -12,7 +12,6 @@ export function isValidPlacement(
   regions: number[][]
 ): boolean {
   const targetRegion = regions[row][col];
-  if (targetRegion === -1) return false;
 
   for (const q of queens) {
     // Same row
@@ -56,7 +55,6 @@ export function solvePuzzle(
       if (rows & (1 << row)) continue;
       const available: Coordinate[] = [];
       for (let col = 0; col < size; col++) {
-        if (regions[row][col] === -1) continue;
         if ((usedCols & (1 << col)) || (usedRegions & (1 << regions[row][col]))) continue;
         if (row > 0 && cols[row - 1] >= 0 && Math.abs(cols[row - 1] - col) <= 1) continue;
         if (row + 1 < size && cols[row + 1] >= 0 && Math.abs(cols[row + 1] - col) <= 1) continue;
@@ -153,7 +151,7 @@ export function getAutoCrossCells(
   currentCells: BoardCell[]
 ): Coordinate[] {
   const targetRegion = regions[placedRow][placedCol];
-  return currentCells.filter(cell => cell.state === 'empty' && cell.region !== -1 &&
+  return currentCells.filter(cell => cell.state === 'empty' &&
     !(cell.row === placedRow && cell.col === placedCol) &&
     (cell.row === placedRow || cell.col === placedCol || regions[cell.row][cell.col] === targetRegion ||
       (Math.abs(cell.row - placedRow) <= 1 && Math.abs(cell.col - placedCol) <= 1)))
@@ -1230,7 +1228,6 @@ export function validatePuzzleIntegrity(puzzle: Puzzle): { valid: boolean; error
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
       const reg = regions[r][c];
-      if (reg === -1) continue; // void/missing cell
       if (!Number.isInteger(reg) || reg < 0 || reg >= size) {
         return { valid: false, error: `Cell (${r}, ${c}) has invalid region index ${reg}` };
       }
