@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.dan.schrodoku',
-  appName: 'SchroDoku',
+  appId: 'com.dan.frankiedoku',
+  appName: 'FrankieDoku',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

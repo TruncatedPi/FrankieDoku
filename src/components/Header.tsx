@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-1.5 leading-none mb-0.5">
               <h1 className="text-xl font-bold tracking-tight text-amber-950 dark:text-amber-100 flex items-center gap-1">
-                SchroDoku!
+                FrankieDoku!
               </h1>
               <span
                 data-testid="app-version"

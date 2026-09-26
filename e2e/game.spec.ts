@@ -93,7 +93,7 @@ test('project-subpath icons, fonts, worker and gameplay remain available offline
   // A separate origin lets us shut down the network server without affecting other tests.
   const server = startBuiltServer(0);
   await once(server, 'listening');
-  const address = `http://127.0.0.1:${server.address().port}/SchroDoku/`;
+  const address = `http://127.0.0.1:${server.address().port}/FrankieDoku/`;
   try {
   await page.goto(address);
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });

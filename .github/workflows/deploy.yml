@@ -1,4 +1,4 @@
-name: Deploy SchroDoku to GitHub Pages
+name: Deploy FrankieDoku to GitHub Pages
 
 on:
   push:

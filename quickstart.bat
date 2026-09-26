@@ -3,10 +3,10 @@ setlocal enabledelayedexpansion
 
 :: Ensure script runs from the repository root
 cd /d "%~dp0"
-title SchroDoku Server
+title FrankieDoku Server
 
 echo =======================================================
-echo              SchroDoku - Quickstart Server
+echo              FrankieDoku - Quickstart Server
 echo =======================================================
 echo.
 
@@ -54,7 +54,7 @@ if /i "%~1"=="preview" goto do_preview
 :do_dev
 set "PORT=3000"
 echo =======================================================
-echo   🐱 SchroDoku URLs to Use:
+echo   🐱 FrankieDoku URLs to Use:
 echo =======================================================
 echo   * Desktop Browser:  http://localhost:%PORT%/
 if defined LAN_IP (
@@ -104,7 +104,7 @@ if not exist "dist\" (
     echo.
 )
 echo =======================================================
-echo   🐱 SchroDoku Preview URLs to Use:
+echo   🐱 FrankieDoku Preview URLs to Use:
 echo =======================================================
 echo   * Desktop Browser:  http://localhost:%PORT%/
 if defined LAN_IP (

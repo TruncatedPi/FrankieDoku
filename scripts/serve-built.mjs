@@ -10,8 +10,9 @@ export function startBuiltServer(port = 4173) {
 return createServer(async (req, res) => {
   try {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-    if (!pathname.startsWith('/SchroDoku/')) throw new Error('Outside project');
-    const file = resolve(root, pathname.slice('/SchroDoku/'.length) || 'index.html');
+    const prefix = pathname.startsWith('/FrankieDoku/') ? '/FrankieDoku/' : pathname.startsWith('/SchroDoku/') ? '/SchroDoku/' : null;
+    if (!prefix) throw new Error('Outside project');
+    const file = resolve(root, pathname.slice(prefix.length) || 'index.html');
     if (!file.startsWith(root + sep)) throw new Error('Outside build');
     const data = await readFile(file);
     res.writeHead(200, { 'Content-Type': mime[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });

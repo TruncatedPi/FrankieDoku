@@ -24,7 +24,7 @@ function lanUrlPlugin(): Plugin {
   const printBanner = (port: number, mode: string) => {
     const lanIp = getLanIp();
     console.log('\n  ======================================================');
-    console.log(`  🐱 SchroDoku URLs to Use (${mode}):`);
+    console.log(`  🐱 FrankieDoku URLs to Use (${mode}):`);
     console.log(`     🖥️  Desktop Browser:  http://localhost:${port}/`);
     if (lanIp) {
       console.log(`     📱  Pixel 9 / Phone:  http://${lanIp}:${port}/`);
@@ -104,8 +104,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png', 'cat-icon.svg'],
       manifest: {
-        name: 'SchroDoku - Cozy Cat Logic Puzzle',
-        short_name: 'SchroDoku',
+        name: 'FrankieDoku - Cozy Cat Logic Puzzle',
+        short_name: 'FrankieDoku',
         description: 'An ad-free, cozy cat-themed Queens/Star Battle logic puzzle game.',
         theme_color: '#fdf6ee',
         background_color: '#fdf6ee',

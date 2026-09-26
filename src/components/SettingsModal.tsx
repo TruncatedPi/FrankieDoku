@@ -315,7 +315,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* App Version Info */}
           <div className="pt-1 text-center">
             <p className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-              SchroDoku {APP_VERSION}
+              FrankieDoku {APP_VERSION}
             </p>
           </div>
         </div>
