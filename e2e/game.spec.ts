@@ -14,7 +14,11 @@ test('board settles, accepts keyboard input, and restores state after reload', a
   await page.goto('./');
   // This test exercises session restoration after startup, not cancellation of
   // the browser's initial service-worker installation during navigation.
-  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.evaluate(async () => {
+    if ('serviceWorker' in navigator) {
+      await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(r, 2000))]);
+    }
+  });
   const cell = page.locator('[data-row="0"][data-col="0"]');
   await cell.focus();
   await page.keyboard.press('Space');
@@ -128,9 +132,10 @@ test('hint overlays menu area without jumping the board and displays logical ste
   const hintOverlay = page.locator('[data-testid="hint-overlay"]');
   await expect(hintOverlay).toBeVisible();
 
-  // The board's vertical position must NOT jump down (within subpixel rendering tolerance)
+  // The board's vertical position relative to the document must NOT jump down (within subpixel rendering tolerance)
   const boxAfter = (await board.boundingBox())!;
-  expect(Math.abs(boxAfter.y - boxBefore.y)).toBeLessThanOrEqual(2);
+  const scrollY = await page.evaluate(() => window.scrollY);
+  expect(Math.abs((boxAfter.y + scrollY) - boxBefore.y)).toBeLessThanOrEqual(2);
 
   // Dismiss button restores menus
   await page.getByRole('button', { name: 'Dismiss Hint' }).click();

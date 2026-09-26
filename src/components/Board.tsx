@@ -65,13 +65,14 @@ export const Board: React.FC<BoardProps> = ({
   }, [puzzle, inputMode]);
 
   const handlePointerDown = (row: number, col: number, e: React.PointerEvent) => {
-    if (disabled || !e.isPrimary) return;
+    if (disabled) return;
     // Secondary click (right click) = always toggle Cat
     if (e.button === 2) {
       e.preventDefault();
       onCellAction(row, col, 'cat');
       return;
     }
+    if (!e.isPrimary) return;
 
     isDragging.current = true;
     dragStartCellRef.current = { row, col };
