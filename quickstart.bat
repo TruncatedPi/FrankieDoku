@@ -62,6 +62,9 @@ if defined LAN_IP (
 ) else (
     echo   * Pixel 9 / Phone:  (Connect phone to local Wi-Fi)
 )
+echo.
+echo   NOTE: Dev mode (port 3000) does not support offline PWA install.
+echo   For offline mobile installation, run: quickstart.bat preview
 echo =======================================================
 echo.
 echo Opening browser at http://localhost:%PORT%/ ...
@@ -108,6 +111,14 @@ if defined LAN_IP (
     echo   * Pixel 9 / Phone:  http://!LAN_IP!:%PORT%/
 ) else (
     echo   * Pixel 9 / Phone:  (Connect phone to local Wi-Fi)
+)
+echo.
+echo   Offline PWA Setup for Brave / Chrome on Android:
+if defined LAN_IP (
+    echo   1. On phone, open: brave://flags (or chrome://flags)
+    echo   2. Search: "Insecure origins treated as secure" -^> Enable
+    echo   3. Enter: http://!LAN_IP!:%PORT%  and tap Relaunch
+    echo   4. Visit http://!LAN_IP!:%PORT%/ -^> Menu -^> "Install app"
 )
 echo =======================================================
 echo.
