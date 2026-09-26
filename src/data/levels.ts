@@ -1,8 +1,76 @@
 import { Puzzle } from '../engine/types';
 
+export type CampaignTier = 'Kitten' | 'Playful' | 'Clever' | 'Master' | 'Explorer' | 'Adventurer' | 'Champion' | 'Legend' | 'Grandmaster';
+
 export interface CampaignLevel extends Puzzle {
   levelNumber: number;
-  tier: 'Kitten' | 'Playful' | 'Clever' | 'Master' | 'Explorer' | 'Adventurer' | 'Champion' | 'Legend' | 'Grandmaster';
+  tier: CampaignTier;
+}
+
+export interface CampaignTierInfo {
+  name: CampaignTier;
+  label: string;
+  badge: string;
+  startLevel: number;
+  endLevel: number;
+  gridSizes: string;
+}
+
+export const CAMPAIGN_TIERS: CampaignTierInfo[] = [
+  { name: 'Kitten', label: 'Tier 1: Kitten', badge: '🐾', startLevel: 1, endLevel: 10, gridSizes: '4×4 – 5×5' },
+  { name: 'Playful', label: 'Tier 2: Playful', badge: '🧶', startLevel: 11, endLevel: 25, gridSizes: '6×6 – 7×7' },
+  { name: 'Clever', label: 'Tier 3: Clever', badge: '😼', startLevel: 26, endLevel: 40, gridSizes: '8×8 – 9×9' },
+  { name: 'Master', label: 'Tier 4: Master', badge: '👑', startLevel: 41, endLevel: 50, gridSizes: '10×10' },
+  { name: 'Explorer', label: 'Tier 5: Explorer', badge: '🗺️', startLevel: 51, endLevel: 60, gridSizes: '8×8' },
+  { name: 'Adventurer', label: 'Tier 6: Adventurer', badge: '⚔️', startLevel: 61, endLevel: 70, gridSizes: '9×9' },
+  { name: 'Champion', label: 'Tier 7: Champion', badge: '🏆', startLevel: 71, endLevel: 80, gridSizes: '10×10' },
+  { name: 'Legend', label: 'Tier 8: Legend', badge: '🌟', startLevel: 81, endLevel: 90, gridSizes: '11×11' },
+  { name: 'Grandmaster', label: 'Tier 9: Grandmaster', badge: '💎', startLevel: 91, endLevel: 100, gridSizes: '12×12' },
+];
+
+export interface TierMilestone {
+  isTierComplete: boolean;
+  isFinalCampaignComplete: boolean;
+  completedTier: CampaignTierInfo;
+  nextTier?: CampaignTierInfo;
+  nextLevelNumber?: number;
+}
+
+export function getTierMilestone(levelId: string): TierMilestone | null {
+  const index = CAMPAIGN_LEVELS.findIndex(l => l.id === levelId);
+  if (index === -1) return null;
+  const current = CAMPAIGN_LEVELS[index];
+  const next = CAMPAIGN_LEVELS[index + 1];
+
+  const currentTierInfo = CAMPAIGN_TIERS.find(t => t.name === current.tier) ?? {
+    name: current.tier,
+    label: current.tier,
+    badge: '🐾',
+    startLevel: current.levelNumber,
+    endLevel: current.levelNumber,
+    gridSizes: `${current.size}x${current.size}`,
+  };
+
+  if (!next) {
+    return {
+      isTierComplete: true,
+      isFinalCampaignComplete: true,
+      completedTier: currentTierInfo,
+    };
+  }
+
+  if (current.tier !== next.tier) {
+    const nextTierInfo = CAMPAIGN_TIERS.find(t => t.name === next.tier);
+    return {
+      isTierComplete: true,
+      isFinalCampaignComplete: false,
+      completedTier: currentTierInfo,
+      nextTier: nextTierInfo,
+      nextLevelNumber: next.levelNumber,
+    };
+  }
+
+  return null;
 }
 
 export const CAMPAIGN_LEVELS: CampaignLevel[] = [

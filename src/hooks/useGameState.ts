@@ -3,7 +3,7 @@ import type { GameMode, InputMode, Puzzle, UserSettings, HintResult, TwoPlayerCo
 import { gameReducer, newGame, type CellAction } from '../engine/game';
 import { getSatisfiedUnits, generateHint } from '../engine/solver';
 import { requestPuzzle } from '../engine/generation-client';
-import { CAMPAIGN_LEVELS, type CampaignLevel } from '../data/levels';
+import { CAMPAIGN_LEVELS, type CampaignLevel, getTierMilestone, type TierMilestone } from '../data/levels';
 import { loadSettings, saveSettings, loadStats, saveStats, loadCampaignProgress, saveCampaignProgress,
   loadDailyProgress, saveDailyProgress, loadSavedSession, saveSession, sanitizeSettings, DEFAULT_STATS } from '../utils/storage';
 import { dailyStreaks, localDateKey } from '../utils/dates';
@@ -83,7 +83,16 @@ export function useGameState() {
   useEffect(() => {
     if (!game.isWon || recordedWin.current === game.sessionId) return;
     recordedWin.current = game.sessionId;
-    sound.playVictory();
+    const milestone = game.gameMode === 'campaign' ? getTierMilestone(game.puzzle.id) : null;
+    if (milestone?.isFinalCampaignComplete) {
+      sound.playCampaignComplete();
+      sound.triggerHaptic('heavy');
+    } else if (milestone?.isTierComplete) {
+      sound.playSetComplete();
+      sound.triggerHaptic('medium');
+    } else {
+      sound.playVictory();
+    }
     const size = game.puzzle.size, finishTime = game.timerSeconds;
     setStats(prev => ({ ...prev, gamesWon: prev.gamesWon + 1,
       bestTimesBySize: { ...prev.bestTimesBySize, [size]: Math.min(prev.bestTimesBySize[size] ?? Infinity, finishTime) } }));
@@ -142,9 +151,13 @@ export function useGameState() {
   const satisfied = useMemo(() => getSatisfiedUnits(game.cells, currentPuzzle.size, currentPuzzle.regions), [game.cells, currentPuzzle]);
   const nextIndex = CAMPAIGN_LEVELS.findIndex(level => level.id === currentPuzzle.id) + 1;
   const hasNextLevel = game.gameMode === 'campaign' && nextIndex > 0 && nextIndex < CAMPAIGN_LEVELS.length;
+  const tierMilestone = useMemo(() => {
+    return game.gameMode === 'campaign' ? getTierMilestone(currentPuzzle.id) : null;
+  }, [game.gameMode, currentPuzzle.id]);
   return {
     settings, stats, campaignProgress, dailyProgress, ...game, currentPuzzle, currentLevel,
     inputMode, setInputMode, markColor, handleToggleMarkColor, maxHearts: 3, activeHint, isGenerating, generationError,
+    tierMilestone,
     satisfiedRows: satisfied.rows, satisfiedCols: satisfied.cols, satisfiedRegions: satisfied.regions,
     remainingCats: Math.max(0, currentPuzzle.size - game.cells.filter(c => c.state === 'cat').length),
     handleCellAction, handleHint,

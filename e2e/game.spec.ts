@@ -175,4 +175,51 @@ test('mark toggle switches between black and red X and persists on placed marks'
   await expect(cell).toHaveAttribute('data-state', 'empty');
 });
 
+test('campaign set completion popup announces completed set and next set', async ({ page }) => {
+  const level10 = CAMPAIGN_LEVELS[9]; // Level 10 (end of Kitten tier)
+  await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(level10, 'campaign'));
+  await page.goto('./');
+
+  for (const q of level10.solution!) {
+    await page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`).click({ button: 'right' });
+  }
+
+  // Set Complete pop-up message is visible
+  await expect(page.getByText('Kitten Set Complete!')).toBeVisible();
+  await expect(page.getByText(/Now Starting New Set/i)).toBeVisible();
+  await expect(page.getByText('Playful Set', { exact: true })).toBeVisible();
+
+  // Primary button starts next tier
+  const nextSetBtn = page.getByRole('button', { name: /Start Playful Set/i });
+  await expect(nextSetBtn).toBeVisible();
+  await nextSetBtn.click();
+
+  // Level 11 is loaded
+  await expect(page.locator('[data-cell]')).toHaveCount(36); // 6x6
+});
+
+test('final level 100 completion displays celebration screen and transitions to Free Play', async ({ page }) => {
+  const level100 = CAMPAIGN_LEVELS[99]; // Level 100 (Grandmaster final level)
+  await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(level100, 'campaign'));
+  await page.goto('./');
+
+  for (const q of level100.solution!) {
+    await page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`).click({ button: 'right', force: true });
+  }
+
+  // Grand celebration screen
+  await expect(page.getByText('Grand Champion! 👑')).toBeVisible();
+  await expect(page.getByText('All 100 Campaign Levels Conquered!')).toBeVisible();
+  await expect(page.getByText(/Grandmaster Set Complete!/i)).toBeVisible();
+
+  // Primary button transitions to Free Play
+  const freePlayBtn = page.getByRole('button', { name: /Enter Free Play Mode/i });
+  await expect(freePlayBtn).toBeVisible();
+  await freePlayBtn.click();
+
+  // Free Play modal / screen is shown
+  await expect(page.getByRole('dialog', { name: 'Free Play' })).toBeVisible();
+});
+
+
 

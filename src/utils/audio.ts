@@ -242,6 +242,112 @@ class SoundManager {
   }
 
   /**
+   * Joyful, bright celebratory fanfare when completing an entire campaign set / tier!
+   */
+  public playSetComplete() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Ascending celebratory run: C5, E5, G5, A5, C6, E6, G6
+    const notes = [523.25, 659.25, 783.99, 880.0, 1046.5, 1318.51, 1567.98];
+
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = i >= 4 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq, now + i * 0.07);
+
+      gain.gain.setValueAtTime(this.volume * 0.5, now + i * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.6);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + i * 0.07);
+      osc.stop(now + i * 0.07 + 0.65);
+    });
+
+    // Harmonized root chord shimmer at the end (C5 + G5 + C6)
+    const chordTime = now + notes.length * 0.07;
+    [523.25, 783.99, 1046.5].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, chordTime);
+
+      gain.gain.setValueAtTime(this.volume * 0.35, chordTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, chordTime + 0.8);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(chordTime);
+      osc.stop(chordTime + 0.85);
+    });
+  }
+
+  /**
+   * Grand triumphant fanfare when completing all 100 levels of the entire campaign!
+   */
+  public playCampaignComplete() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Magnificent chord progression: C major -> F major -> G major -> C6 triumph
+    const chords: { time: number; freqs: number[]; duration: number }[] = [
+      { time: now, freqs: [261.63, 329.63, 392.0, 523.25], duration: 0.28 },
+      { time: now + 0.3, freqs: [349.23, 440.0, 523.25, 698.46], duration: 0.28 },
+      { time: now + 0.6, freqs: [392.0, 493.88, 587.33, 783.99], duration: 0.32 },
+      { time: now + 0.95, freqs: [523.25, 659.25, 783.99, 1046.5], duration: 1.2 },
+    ];
+
+    chords.forEach(({ time, freqs, duration }) => {
+      freqs.forEach((freq) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, time);
+
+        gain.gain.setValueAtTime(this.volume * 0.45, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(time);
+        osc.stop(time + duration + 0.05);
+      });
+    });
+
+    // Cascading high sparkle chimes over the final chord
+    const sparkleNotes = [1046.5, 1318.51, 1567.98, 2093.0];
+    sparkleNotes.forEach((freq, idx) => {
+      const sparkleTime = now + 1.05 + idx * 0.08;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, sparkleTime);
+
+      gain.gain.setValueAtTime(this.volume * 0.3, sparkleTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, sparkleTime + 0.5);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(sparkleTime);
+      osc.stop(sparkleTime + 0.55);
+    });
+  }
+
+  /**
    * Haptic vibration feedback for mobile devices.
    */
   public triggerHaptic(type: 'light' | 'medium' | 'heavy' = 'light') {

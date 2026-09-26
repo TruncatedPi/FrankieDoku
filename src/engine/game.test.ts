@@ -123,3 +123,42 @@ test('mark color placement, switching between black and red, and undo/redo', () 
   assert.equal(game.cells[1].markColor, 'red');
 });
 
+test('getTierMilestone identifies intermediate tier completion and final campaign completion', async () => {
+  const { getTierMilestone } = await import('../data/levels');
+
+  // Level 1: middle of Kitten tier -> not a milestone
+  assert.equal(getTierMilestone('level-1'), null);
+
+  // Level 10: end of Kitten tier -> completed Kitten, next is Playful
+  const m10 = getTierMilestone('level-10');
+  assert.ok(m10);
+  assert.equal(m10.isTierComplete, true);
+  assert.equal(m10.isFinalCampaignComplete, false);
+  assert.equal(m10.completedTier.name, 'Kitten');
+  assert.equal(m10.nextTier?.name, 'Playful');
+  assert.equal(m10.nextLevelNumber, 11);
+
+  // Level 25: end of Playful tier -> completed Playful, next is Clever
+  const m25 = getTierMilestone('level-25');
+  assert.ok(m25);
+  assert.equal(m25.completedTier.name, 'Playful');
+  assert.equal(m25.nextTier?.name, 'Clever');
+  assert.equal(m25.nextLevelNumber, 26);
+
+  // Level 50: end of Master tier -> completed Master, next is Explorer
+  const m50 = getTierMilestone('level-50');
+  assert.ok(m50);
+  assert.equal(m50.completedTier.name, 'Master');
+  assert.equal(m50.nextTier?.name, 'Explorer');
+  assert.equal(m50.nextLevelNumber, 51);
+
+  // Level 100: final level of final campaign!
+  const m100 = getTierMilestone('level-100');
+  assert.ok(m100);
+  assert.equal(m100.isTierComplete, true);
+  assert.equal(m100.isFinalCampaignComplete, true);
+  assert.equal(m100.completedTier.name, 'Grandmaster');
+  assert.equal(m100.nextTier, undefined);
+});
+
+

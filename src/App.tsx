@@ -56,6 +56,7 @@ export function App() {
     handleUpdateSettings,
     handleResetProgress,
     hasNextLevel,
+    tierMilestone,
     isGenerating,
     generationError,
   } = useGameState();
@@ -75,7 +76,7 @@ export function App() {
       : settings.catBreed;
 
   return (
-    <div className="min-h-screen min-h-[100dvh] w-full flex flex-col justify-start overflow-x-hidden overflow-y-auto bg-gradient-to-b from-[#fdf8f4] to-[#fbf1e8] dark:from-[#1a1926] dark:to-[#12111a] text-slate-800 dark:text-slate-100 font-bubble transition-colors duration-300 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))]">
+    <div className="min-h-screen min-h-[100dvh] w-full flex flex-col justify-start overflow-x-hidden overflow-y-auto bg-gradient-to-b from-[#fdf8f4] to-[#fbf1e8] dark:from-[#1a1926] dark:to-[#12111a] text-slate-800 dark:text-slate-100 font-bubble transition-colors duration-300 pt-[max(0.5rem,calc(env(safe-area-inset-top)+0.25rem))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       {/* Header */}
       <Header
         gameMode={gameMode}
@@ -213,8 +214,20 @@ export function App() {
         hasNextLevel={Boolean(hasNextLevel)}
         onNextLevel={handleNextLevel}
         onReplay={handleReset}
-        onClose={() => setIsLevelsOpen(true)}
+        onClose={() => {
+          if (tierMilestone?.isFinalCampaignComplete) {
+            handleStartFreePlay(7);
+            setIsFreePlayOpen(true);
+          } else {
+            setIsLevelsOpen(true);
+          }
+        }}
         catBreed={activeBreed}
+        tierMilestone={tierMilestone}
+        onEnterFreePlay={() => {
+          handleStartFreePlay(7);
+          setIsFreePlayOpen(true);
+        }}
       />
 
       {/* Level Select Modal */}
