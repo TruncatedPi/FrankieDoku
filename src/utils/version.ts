@@ -21,37 +21,45 @@ export function getDayOfYear(year: number, month: number, day: number): number {
 }
 
 /**
- * Formats a version string in the form: v1.YYdoy.HH
+ * Formats a version string in the form: v2.YYMM.DDHH
  * - YY: 2-digit year (e.g. '26' for 2026)
- * - doy: Day of year with leading zeros (e.g. '001' to '366')
- * - HH: 24-hour time with leading zero (e.g. '09', '14')
+ * - MM: 2-digit month with leading zero ('01'-'12')
+ * - DD: 2-digit day of month with leading zero ('01'-'31')
+ * - HH: 24-hour time with leading zero in local (UTC-7) time ('00'-'23')
  * 
- * Supports ISO date strings (e.g. from git log %cI: "2026-09-06T09:08:43-07:00")
- * preserving the commit's local date and hour across any timezone.
+ * Supports Date objects and ISO date strings (e.g. from git log %cI: "2026-09-26T12:55:45-07:00" or UTC "2026-09-26T19:55:45Z").
  */
 export function formatAppVersion(dateOrIso: Date | string = new Date()): string {
+  let date: Date;
+
   if (typeof dateOrIso === 'string') {
-    const match = dateOrIso.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):/);
-    if (match) {
-      const year = parseInt(match[1], 10);
-      const month = parseInt(match[2], 10);
-      const day = parseInt(match[3], 10);
-      const yy = String(year).slice(-2);
-      const doy = String(getDayOfYear(year, month, day)).padStart(3, '0');
-      const hh = match[4];
-      return `v1.${yy}${doy}.${hh}`;
+    if (dateOrIso.includes('Z') || /[+-]\d{2}:\d{2}$/.test(dateOrIso)) {
+      date = new Date(dateOrIso);
+    } else {
+      const match = dateOrIso.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):/);
+      if (match) {
+        const yy = match[1].slice(-2);
+        const mm = match[2];
+        const dd = match[3];
+        const hh = match[4];
+        return `v2.${yy}${mm}.${dd}${hh}`;
+      }
+      date = new Date(dateOrIso);
     }
+  } else {
+    date = dateOrIso;
   }
 
-  const date = typeof dateOrIso === 'string' ? new Date(dateOrIso) : dateOrIso;
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const yy = String(year).slice(-2);
-  const doy = String(getDayOfYear(year, month, day)).padStart(3, '0');
-  const hh = String(date.getHours()).padStart(2, '0');
+  // Convert to UTC-7 (Pacific / local target offset)
+  const utcMs = date.getTime();
+  const targetMs = utcMs - 7 * 60 * 60 * 1000;
+  const target = new Date(targetMs);
+  const yy = String(target.getUTCFullYear()).slice(-2);
+  const mm = String(target.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(target.getUTCDate()).padStart(2, '0');
+  const hh = String(target.getUTCHours()).padStart(2, '0');
 
-  return `v1.${yy}${doy}.${hh}`;
+  return `v2.${yy}${mm}.${dd}${hh}`;
 }
 
 declare const __APP_VERSION__: string | undefined;

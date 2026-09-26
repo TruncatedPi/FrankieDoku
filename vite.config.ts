@@ -59,37 +59,32 @@ function getCommitDate(): string {
   return new Date().toISOString();
 }
 
-function getDayOfYear(year: number, month: number, day: number): number {
-  const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-  const daysBeforeMonth = [
-    0, 31, 31 + (isLeap ? 29 : 28), 31 + (isLeap ? 29 : 28) + 31,
-    31 + (isLeap ? 29 : 28) + 31 + 30, 31 + (isLeap ? 29 : 28) + 31 + 30 + 31,
-    31 + (isLeap ? 29 : 28) + 31 + 30 + 31 + 30, 31 + (isLeap ? 29 : 28) + 31 + 30 + 31 + 30 + 31,
-    31 + (isLeap ? 29 : 28) + 31 + 30 + 31 + 30 + 31 + 31, 31 + (isLeap ? 29 : 28) + 31 + 30 + 31 + 30 + 31 + 31 + 30,
-    31 + (isLeap ? 29 : 28) + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31,
-    31 + (isLeap ? 29 : 28) + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
-  ];
-  return daysBeforeMonth[month - 1] + day;
-}
-
 function getBuildVersion(): string {
   const commitIso = getCommitDate();
-  const match = commitIso.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):/);
-  if (match) {
-    const year = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10);
-    const day = parseInt(match[3], 10);
-    const yy = String(year).slice(-2);
-    const doy = String(getDayOfYear(year, month, day)).padStart(3, '0');
-    const hh = match[4];
-    return `v1.${yy}${doy}.${hh}`;
+  let date: Date;
+
+  if (commitIso.includes('Z') || /[+-]\d{2}:\d{2}$/.test(commitIso)) {
+    date = new Date(commitIso);
+  } else {
+    const match = commitIso.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):/);
+    if (match) {
+      const yy = match[1].slice(-2);
+      const mm = match[2];
+      const dd = match[3];
+      const hh = match[4];
+      return `v2.${yy}${mm}.${dd}${hh}`;
+    }
+    date = new Date(commitIso);
   }
-  const now = new Date();
-  const year = now.getFullYear();
-  const yy = String(year).slice(-2);
-  const doy = String(getDayOfYear(year, now.getMonth() + 1, now.getDate())).padStart(3, '0');
-  const hh = String(now.getHours()).padStart(2, '0');
-  return `v1.${yy}${doy}.${hh}`;
+
+  const targetMs = date.getTime() - 7 * 60 * 60 * 1000;
+  const target = new Date(targetMs);
+  const yy = String(target.getUTCFullYear()).slice(-2);
+  const mm = String(target.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(target.getUTCDate()).padStart(2, '0');
+  const hh = String(target.getUTCHours()).padStart(2, '0');
+
+  return `v2.${yy}${mm}.${dd}${hh}`;
 }
 
 export default defineConfig({
