@@ -164,11 +164,13 @@ test('mark toggle switches between black and red X and persists on placed marks'
   await expect(toggle).toHaveText(/Black X/i);
 
   // Tap cell (0, 0): since it was red and we're now in black mode, it switches color to black
+  await page.waitForTimeout(350);
   await cell.click();
   await expect(cell).toHaveAttribute('data-state', 'mark');
   await expect(cell).toHaveAttribute('data-mark-color', 'black');
 
   // Tap cell (0, 0) again: in black mode on black mark, it clears to empty
+  await page.waitForTimeout(350);
   await cell.click();
   await expect(cell).toHaveAttribute('data-state', 'empty');
 });

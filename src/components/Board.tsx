@@ -122,12 +122,19 @@ export const Board: React.FC<BoardProps> = ({
       dragStartCellRef.current = null;
       lastHoveredCellRef.current = null;
     };
+    const handleGlobalPointerDown = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('[data-testid="game-board"]')) {
+        lastTappedRef.current = null;
+      }
+    };
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
+    window.addEventListener('pointerdown', handleGlobalPointerDown);
     window.addEventListener('blur', handlePointerUp);
     return () => {
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('pointerdown', handleGlobalPointerDown);
       window.removeEventListener('blur', handlePointerUp);
     };
   }, []);
