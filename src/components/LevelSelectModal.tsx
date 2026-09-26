@@ -11,11 +11,18 @@ interface LevelSelectModalProps {
   onSelectLevel: (level: CampaignLevel) => void;
 }
 
-const TIERS: { name: 'Kitten' | 'Playful' | 'Clever' | 'Master'; label: string; badge: string }[] = [
+type TierName = 'Kitten' | 'Playful' | 'Clever' | 'Master' | 'Explorer' | 'Adventurer' | 'Champion' | 'Legend' | 'Grandmaster';
+
+const TIERS: { name: TierName; label: string; badge: string }[] = [
   { name: 'Kitten', label: 'Tier 1: Kitten (4x4-5x5)', badge: '🐾' },
   { name: 'Playful', label: 'Tier 2: Playful (6x6-7x7)', badge: '🧶' },
   { name: 'Clever', label: 'Tier 3: Clever (8x8-9x9)', badge: '😼' },
   { name: 'Master', label: 'Tier 4: Master (10x10)', badge: '👑' },
+  { name: 'Explorer', label: 'Tier 5: Explorer (8x8)', badge: '🗺️' },
+  { name: 'Adventurer', label: 'Tier 6: Adventurer (9x9)', badge: '⚔️' },
+  { name: 'Champion', label: 'Tier 7: Champion (10x10)', badge: '🏆' },
+  { name: 'Legend', label: 'Tier 8: Legend (11x11)', badge: '🌟' },
+  { name: 'Grandmaster', label: 'Tier 9: Grandmaster (12x12)', badge: '💎' },
 ];
 
 export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
@@ -25,7 +32,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
   progressMap,
   onSelectLevel,
 }) => {
-  const [selectedTier, setSelectedTier] = useState<'Kitten' | 'Playful' | 'Clever' | 'Master'>('Kitten');
+  const [selectedTier, setSelectedTier] = useState<TierName>('Kitten');
 
   if (!isOpen) return null;
 
@@ -52,7 +59,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                 Campaign Levels
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                50 Crafted Logic Puzzles
+                100 Crafted Logic Puzzles
               </p>
             </div>
           </div>
@@ -67,20 +74,20 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
         </div>
 
         {/* Tier Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-100/80 dark:bg-white/5 text-xs font-semibold">
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/80 dark:bg-white/5 text-xs font-semibold overflow-x-auto no-scrollbar scroll-smooth">
           {TIERS.map((tier) => (
             <button
               key={tier.name}
               type="button"
               onClick={() => setSelectedTier(tier.name)}
-              className={`py-2 px-1 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
+              className={`py-1.5 px-3 rounded-xl transition-all flex items-center gap-1.5 shrink-0 ${
                 selectedTier === tier.name
                   ? 'bg-white dark:bg-amber-600 text-amber-900 dark:text-white shadow-sm font-bold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'
               }`}
             >
               <span className="text-sm leading-none">{tier.badge}</span>
-              <span className="text-[11px] truncate">{tier.name}</span>
+              <span className="text-[11px] whitespace-nowrap">{tier.name}</span>
             </button>
           ))}
         </div>

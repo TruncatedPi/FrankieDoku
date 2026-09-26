@@ -13,8 +13,8 @@ import { BoardCell, Puzzle } from './types';
 import { getTerritoryInfo, stripTerritoryTags } from './palettes';
 
 describe('Puzzle Integrity & Contradiction Verification', () => {
-  test('All 50 Campaign Levels must be 100% contradiction-free with strictly 1 unique solution', () => {
-    assert.strictEqual(CAMPAIGN_LEVELS.length, 50, 'Must have exactly 50 campaign levels');
+  test('All 100 Campaign Levels must be 100% contradiction-free with strictly 1 unique solution', () => {
+    assert.strictEqual(CAMPAIGN_LEVELS.length, 100, 'Must have exactly 100 campaign levels');
 
     for (const level of CAMPAIGN_LEVELS) {
       const integrity = validatePuzzleIntegrity(level);
