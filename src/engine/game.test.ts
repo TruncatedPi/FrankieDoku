@@ -152,13 +152,16 @@ test('getTierMilestone identifies intermediate tier completion and final campaig
   assert.equal(m50.nextTier?.name, 'Explorer');
   assert.equal(m50.nextLevelNumber, 51);
 
-  // Level 100: final level of final campaign!
+  // Level 100: final level of Campaign 1, with Campaign 2 available.
   const m100 = getTierMilestone('level-100');
   assert.ok(m100);
   assert.equal(m100.isTierComplete, true);
   assert.equal(m100.isFinalCampaignComplete, true);
   assert.equal(m100.completedTier.name, 'Grandmaster');
   assert.equal(m100.nextTier, undefined);
+  assert.equal(m100.completedCampaign.number, 1);
+  assert.equal(m100.nextCampaign?.number, 2);
+  assert.equal(m100.nextLevelNumber, 101);
 });
 
 

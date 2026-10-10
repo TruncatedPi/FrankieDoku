@@ -39,7 +39,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (tierMilestone?.isFinalCampaignComplete) {
-        // Grand celebration double burst for completing all 100 levels
+        // Grand celebration for completing a 100-level campaign
         confetti({
           particleCount: 120,
           spread: 90,
@@ -123,7 +123,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
                 Grand Champion! 👑
               </h2>
               <p className="text-xs text-amber-700 dark:text-amber-300 font-bold mt-0.5">
-                All 100 Campaign Levels Conquered!
+                {tierMilestone?.completedCampaign.name}: All {tierMilestone?.completedCampaign.levelCount} Levels Conquered!
               </p>
             </>
           ) : isTierComplete ? (
@@ -158,7 +158,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               Congratulations! You have mastered every single territory, Aloof cat, and logic puzzle from Kitten to Grandmaster.
             </p>
             <div className="mt-1 px-3 py-1 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 text-xs font-bold border border-amber-300/80">
-              🌟 100 / 100 Campaign Levels Mastered 🌟
+              🌟 {tierMilestone?.completedCampaign.levelCount} / {tierMilestone?.completedCampaign.levelCount} Levels Mastered 🌟
             </div>
           </div>
         )}
@@ -234,7 +234,13 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
         {/* Action Buttons */}
         <div className="w-full flex flex-col gap-2 mt-1">
-          {isFinalCampaign ? (
+          {isFinalCampaign && tierMilestone?.nextCampaign ? (
+            <button type="button" onClick={onNextLevel}
+              className="w-full py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2">
+              <span>Start {tierMilestone.nextCampaign.name} (Level {tierMilestone.nextLevelNumber})</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : isFinalCampaign ? (
             <button
               type="button"
               onClick={onEnterFreePlay || onClose}
@@ -279,7 +285,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               onClick={onClose}
               className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
-              <span>{isFinalCampaign ? 'Free Play' : 'Close'}</span>
+              <span>{isFinalCampaign ? tierMilestone?.nextCampaign ? 'Campaigns' : 'Free Play' : 'Close'}</span>
             </button>
           </div>
         </div>

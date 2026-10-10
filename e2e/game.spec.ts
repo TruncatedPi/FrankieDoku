@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { CAMPAIGN_LEVELS } from '../src/data/levels';
+import { CAMPAIGNS, CAMPAIGN_LEVELS } from '../src/data/levels';
 import { generateDailyPuzzle, generatePuzzle } from '../src/engine/generator';
 import { newGame } from '../src/engine/game';
 import { validateMap } from '../scripts/map-validator';
@@ -198,7 +198,7 @@ test('campaign set completion popup announces completed set and next set', async
   await expect(page.locator('[data-cell]')).toHaveCount(36); // 6x6
 });
 
-test('final level 100 completion displays celebration screen and transitions to Free Play', async ({ page }) => {
+test('Campaign 1 completion celebrates its hundred levels and starts Campaign 2', async ({ page }) => {
   const level100 = CAMPAIGN_LEVELS[99]; // Level 100 (Grandmaster final level)
   await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(level100, 'campaign'));
   await page.goto('./');
@@ -209,17 +209,60 @@ test('final level 100 completion displays celebration screen and transitions to 
 
   // Grand celebration screen
   await expect(page.getByText('Grand Champion! 👑')).toBeVisible();
-  await expect(page.getByText('All 100 Campaign Levels Conquered!')).toBeVisible();
+  await expect(page.getByText('Campaign 1: All 100 Levels Conquered!')).toBeVisible();
   await expect(page.getByText(/Grandmaster Set Complete!/i)).toBeVisible();
 
-  // Primary button transitions to Free Play
-  const freePlayBtn = page.getByRole('button', { name: /Enter Free Play Mode/i });
-  await expect(freePlayBtn).toBeVisible();
-  await freePlayBtn.click();
+  const nextCampaign = page.getByRole('button', { name: 'Start Campaign 2 (Level 101)' });
+  await expect(nextCampaign).toBeVisible();
+  await nextCampaign.press('Enter');
+  await expect(page.locator('[data-cell]')).toHaveCount(16);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_saved_session_v2')!).puzzle.id)).toBe('level-101');
 
-  // Free Play modal / screen is shown
-  await expect(page.getByRole('dialog', { name: 'Free Play' })).toBeVisible();
 });
 
 
 
+
+
+test('campaign overlay switches packs, mirrors tier ranges, and follows the active level on reopen', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Levels', exact: true }).press('Enter');
+  const overlay = page.getByRole('dialog', { name: 'Campaign Levels' });
+  await expect(overlay.getByRole('tab', { name: 'Campaign 1 (1–100)' })).toHaveAttribute('aria-selected', 'true');
+  await overlay.getByRole('tab', { name: 'Campaign 2 (101–200)' }).press('Enter');
+  await expect(overlay.getByRole('button', { name: /^Level 101\b/ })).toBeVisible();
+  await expect(overlay.getByRole('button', { name: /^Level 1\b/ })).toHaveCount(0);
+  await overlay.getByRole('button', { name: 'Grandmaster', exact: true }).press('Enter');
+  await expect(overlay.getByRole('button', { name: /^Level 200\b/ })).toBeVisible();
+  await overlay.getByRole('button', { name: /^Level 191\b/ }).press('Enter');
+  await expect(page.locator('[data-cell]')).toHaveCount(144);
+  await page.getByRole('button', { name: 'Levels', exact: true }).press('Enter');
+  await expect(overlay.getByRole('tab', { name: 'Campaign 2 (101–200)' })).toHaveAttribute('aria-selected', 'true');
+  await expect(overlay.getByRole('button', { name: /^Level 191\b/ })).toBeVisible();
+  await overlay.getByRole('tab', { name: 'Campaign 1 (1–100)' }).press('Enter');
+  await expect(overlay.getByRole('button', { name: /^Level 100\b/ })).toBeVisible();
+  await expect(overlay.getByRole('button', { name: /^Level 200\b/ })).toHaveCount(0);
+});
+
+test('Campaign 2 tier completion uses global numbering for its next tier', async ({ page }) => {
+  const level = CAMPAIGNS[1].levels[9];
+  await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(level, 'campaign'));
+  await page.goto('./');
+  for (const q of level.solution!) await page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`).click({ button: 'right', force: true });
+  await expect(page.getByText('Kitten Set Complete!')).toBeVisible();
+  await page.getByRole('button', { name: 'Start Playful Set (Level 111)' }).press('Enter');
+  await expect(page.locator('[data-cell]')).toHaveCount(36);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_saved_session_v2')!).puzzle.id)).toBe('level-111');
+});
+
+test('the last campaign celebrates its own hundred levels and offers Free Play', async ({ page }) => {
+  const campaign = CAMPAIGNS[CAMPAIGNS.length - 1];
+  const level = campaign.levels[99];
+  await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(level, 'campaign'));
+  await page.goto('./');
+  for (const q of level.solution!) await page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`).click({ button: 'right', force: true });
+  await expect(page.getByText(`${campaign.name}: All 100 Levels Conquered!`)).toBeVisible();
+  await expect(page.getByRole('button', { name: new RegExp(`Start Campaign ${campaign.number + 1}`) })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Enter Free Play Mode' }).press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Free Play' })).toBeVisible();
+});

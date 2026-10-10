@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "tsx --test src/utils/version.test.ts src/engine/engine.test.ts src/engine/contradiction.test.ts src/engine/game.test.ts src/engine/generation-client.test.ts src/utils/storage.test.ts src/hooks/useGameState.test.ts scripts/map-validator.test.ts",
-    "test:watch": "tsx --test --watch src/utils/version.test.ts src/engine/engine.test.ts src/engine/contradiction.test.ts src/engine/game.test.ts src/engine/generation-client.test.ts src/utils/storage.test.ts src/hooks/useGameState.test.ts scripts/map-validator.test.ts",
+    "test": "tsx --test src/utils/version.test.ts src/engine/engine.test.ts src/engine/contradiction.test.ts src/engine/game.test.ts src/engine/generation-client.test.ts src/utils/storage.test.ts src/hooks/useGameState.test.ts scripts/map-validator.test.ts src/data/campaigns.test.ts",
+    "test:watch": "tsx --test --watch src/utils/version.test.ts src/engine/engine.test.ts src/engine/contradiction.test.ts src/engine/game.test.ts src/engine/generation-client.test.ts src/utils/storage.test.ts src/hooks/useGameState.test.ts scripts/map-validator.test.ts src/data/campaigns.test.ts",
     "validate:maps": "tsx scripts/validate-maps.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "generate:campaign": "tsx scripts/generate-campaign.ts"
   },
   "dependencies": {
     "@capacitor/core": "^7.0.1",

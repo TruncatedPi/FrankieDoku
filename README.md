@@ -7,11 +7,7 @@ A portable, cross-platform, ad-free recreation of the beloved **Meowdoku** (Star
 ## ✨ Key Features
 
 - **🚫 100% Ad-Free & Offline**: Zero interruptions, no tracking, pure focused puzzle satisfaction.
-- **🗺️ 50 Handcrafted Campaign Levels**: Progress through 4 tiers:
-  - **Tier 1: Kitten Steps** (Levels 1–10, sizes 4x4 & 5x5)
-  - **Tier 2: Playful Paws** (Levels 11–25, sizes 6x6 & 7x7)
-  - **Tier 3: Clever Whiskers** (Levels 26–40, sizes 8x8 & 9x9)
-  - **Tier 4: Grandmaster Feline** (Levels 41–50, size 10x10)
+- **🗺️ 200 Verified Campaign Levels**: Two 100-level campaigns, each progressing from 4×4 through 12×12 across nine tiers. Campaign 2 (101–200) mirrors Campaign 1's sizes, tiers, and difficulty labels with different maps. Switch campaigns in the Levels overlay; saved progress stays separate.
 - **📅 Daily Challenges**: A deterministic puzzle for each calendar date, with streak tracking and past-date replay.
 - **♾️ Infinite Free Play**: Seeded generator creates verified, unique puzzles from 4x4 through 12x12, with generation in a background worker. Choose a size in Free Play or Co-Op.
 - **👥 Cozy Two-Player / Co-Op**: Play together turn-by-turn with custom player names and favorite cat breeds.
@@ -118,7 +114,7 @@ Run the independent map audit:
 npm run validate:maps
 ```
 
-By default this checks **all 50 campaign maps**, the daily fallback, 31 daily
+By default this checks **all registered campaign maps (currently 200)**, the daily fallback, 31 daily
 dates starting September 1, 2026, and 10 reproducible seeds at **every size 4–12**.
 It checks dimensions, integer region IDs, nonempty connected regions, exactly
 one cat per row/column/region, and no touching cats. It searches independently
@@ -152,8 +148,8 @@ uniqueness **unknown**. It does not silently accept partial search results.
 Generated maps use the application's existing bounded generation attempts;
 the node budget applies to independent validation, not generation.
 
-The repaired generator passes the extended audit: **1,316/1,316** cases,
-including 900 seeds through 12x12 and a year of daily maps. No dates use the old
+The repaired generator passes the extended audit: **1,466/1,466** cases,
+including all 200 campaign maps, 900 seeds through 12x12, and a year of daily maps. No dates use the old
 fallback. The legacy fallback remains in the audit to validate old maps.
 
 Browser checks exercise keyboard and touch input, session restoration, co-op,
@@ -176,3 +172,9 @@ GitHub Pages deployment is conditional on an enabled Pages site. The current
 GitHub plan does not support Pages for this private repository, so Actions
 runs every test and uploads the validated production build while explicitly
 skipping deployment. Enabling Pages later automatically enables deployment.
+
+## Adding campaign packs
+
+Use `npm run generate:campaign` to author the next hundred, then register its
+data file. The overlay, progression, milestones, and map audit adapt automatically.
+See [the campaign-pack guide](docs/campaigns.md) for the steps and validation rules.

@@ -70,3 +70,26 @@ test('markColor toggles and persists to localStorage', async () => {
   await act(async () => renderer.unmount());
 });
 
+
+import { CAMPAIGNS } from '../data/levels';
+
+test('second campaign restores its map and records independent progress with first campaign preserved', async () => {
+  const level = CAMPAIGNS[1].levels[0];
+  data.set('meowdoku_campaign_v1', JSON.stringify({ 'level-1': { levelId: 'level-1', completed: true, stars: 3, bestTimeSeconds: 10 } }));
+  saveSession(newGame(level, 'campaign'));
+  let api!: ReturnType<typeof useGameState>, renderer!: ReactTestRenderer;
+  function Harness() { api = useGameState(); return null; }
+  await act(async () => { renderer = create(createElement(Harness)); });
+  assert.equal(api.currentLevel.levelNumber, 101);
+  await act(async () => { for (const q of level.solution!) api.handleCellAction(q.row, q.col, 'cat'); });
+  assert.equal(api.isWon, true);
+  assert.equal(api.campaignProgress['level-101'].completed, true);
+  assert.equal(api.campaignProgress['level-1'].bestTimeSeconds, 10);
+  await act(async () => api.handleNextLevel());
+  assert.equal(api.currentLevel.levelNumber, 102);
+  await act(async () => renderer.unmount());
+  await act(async () => { renderer = create(createElement(Harness)); });
+  assert.equal(api.currentLevel.levelNumber, 102);
+  assert.equal(api.campaignProgress['level-101'].completed, true);
+  await act(async () => renderer.unmount());
+});

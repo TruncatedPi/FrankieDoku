@@ -3,7 +3,7 @@ import type { GameMode, InputMode, Puzzle, UserSettings, HintResult, TwoPlayerCo
 import { gameReducer, newGame, type CellAction } from '../engine/game';
 import { getSatisfiedUnits, generateHint } from '../engine/solver';
 import { requestPuzzle } from '../engine/generation-client';
-import { CAMPAIGN_LEVELS, type CampaignLevel, getTierMilestone, type TierMilestone } from '../data/levels';
+import { CAMPAIGN_LEVELS, type CampaignLevel, getTierMilestone, getNextCampaignLevel, type TierMilestone } from '../data/levels';
 import { loadSettings, saveSettings, loadStats, saveStats, loadCampaignProgress, saveCampaignProgress,
   loadDailyProgress, saveDailyProgress, loadSavedSession, saveSession, sanitizeSettings, DEFAULT_STATS } from '../utils/storage';
 import { dailyStreaks, localDateKey } from '../utils/dates';
@@ -149,8 +149,8 @@ export function useGameState() {
     if (hint) { setActiveHint(hint); dispatch({ type: 'hint', hint }); sound.playHint(); sound.triggerHaptic('medium'); }
   };
   const satisfied = useMemo(() => getSatisfiedUnits(game.cells, currentPuzzle.size, currentPuzzle.regions), [game.cells, currentPuzzle]);
-  const nextIndex = CAMPAIGN_LEVELS.findIndex(level => level.id === currentPuzzle.id) + 1;
-  const hasNextLevel = game.gameMode === 'campaign' && nextIndex > 0 && nextIndex < CAMPAIGN_LEVELS.length;
+  const nextLevel = getNextCampaignLevel(currentPuzzle.id);
+  const hasNextLevel = game.gameMode === 'campaign' && Boolean(nextLevel);
   const tierMilestone = useMemo(() => {
     return game.gameMode === 'campaign' ? getTierMilestone(currentPuzzle.id) : null;
   }, [game.gameMode, currentPuzzle.id]);
@@ -166,7 +166,7 @@ export function useGameState() {
     handleRedo: () => { if (!isGenerating) { setActiveHint(null); dispatch({ type: 'redo' }); } },
     handleReset: () => startGame(currentPuzzle, game.gameMode, game.twoPlayerConfig),
     handleSelectCampaignLevel: (level: CampaignLevel) => startGame(level, 'campaign'),
-    handleNextLevel: () => { if (hasNextLevel) startGame(CAMPAIGN_LEVELS[nextIndex], 'campaign'); },
+    handleNextLevel: () => { if (hasNextLevel && nextLevel) startGame(nextLevel, 'campaign'); },
     handleSelectDaily: (date: string) => generate({ date }, 'daily'),
     handleStartFreePlay: (size = 7) => generate({ size }, 'freeplay'),
     handleStartTwoPlayer: (config: TwoPlayerConfig & { gridSize: number }) => generate({ size: config.gridSize }, 'twoplayer', config),

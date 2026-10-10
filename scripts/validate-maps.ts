@@ -1,7 +1,8 @@
 import { parseArgs } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { CAMPAIGN_LEVELS } from '../src/data/levels';
+import { CAMPAIGN_LEVELS, CAMPAIGNS, LEVELS_PER_CAMPAIGN, getCampaignForLevel } from '../src/data/levels';
+import { mapFingerprint } from './map-fingerprint';
 import { createDailyFallbackPuzzle, generateDailyPuzzle, generatePuzzle } from '../src/engine/generator';
 import { solvePuzzle } from '../src/engine/solver';
 import type { Puzzle } from '../src/engine/types';
@@ -61,6 +62,7 @@ try {
       startDate.toISOString().slice(0, 10) !== values.start) throw new Error('--start must be a valid YYYY-MM-DD date');
   const results: Array<ReturnType<typeof validateMap> & { id: string; source: string; size?: number; generationMs: number; validationMs: number }> = [];
   const ids = new Set<string>();
+  const campaignLayouts = new Map<string, string>();
   const started = performance.now();
 
   function check(id: string, source: string, makeMap: () => unknown) {
@@ -81,6 +83,14 @@ try {
         ids.add(puzzle.id);
       }
       if (source !== 'file' && puzzle.solution === undefined) result.errors.push('Built-in map is missing its stored solution');
+      if (source === 'campaign' && result.valid) {
+        const key = mapFingerprint(puzzle);
+        const previous = campaignLayouts.get(key);
+        if ((getCampaignForLevel(puzzle.id)?.number ?? 1) > 1 && previous) {
+          result.errors.push(`Map is a recolored, rotated, or reflected copy of ${previous}`);
+        }
+        campaignLayouts.set(key, puzzle.id);
+      }
       // Cross-check independent and production answers only after structural validation succeeds.
       if (result.valid) {
         const production = solvePuzzle(puzzle, 2);
@@ -105,7 +115,7 @@ try {
     if (!maps.length) throw new Error('Input map list must not be empty');
     maps.forEach((map, index) => check(`file[${index}]`, 'file', () => map));
   } else {
-    if (CAMPAIGN_LEVELS.length !== 100) throw new Error('Expected 100 campaign maps');
+    if (CAMPAIGN_LEVELS.length !== CAMPAIGNS.length * LEVELS_PER_CAMPAIGN) throw new Error('Every campaign must contain a full 100-level pack');
     CAMPAIGN_LEVELS.forEach(map => check(map.id, 'campaign', () => map));
     check('daily-fallback', 'fallback', () => createDailyFallbackPuzzle('fallback'));
     for (let day = 0; day < days; day++) {

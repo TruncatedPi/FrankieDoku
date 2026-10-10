@@ -215,7 +215,7 @@ export function App() {
         onNextLevel={handleNextLevel}
         onReplay={handleReset}
         onClose={() => {
-          if (tierMilestone?.isFinalCampaignComplete) {
+          if (tierMilestone?.isFinalCampaignComplete && !tierMilestone.nextCampaign) {
             handleStartFreePlay(7);
             setIsFreePlayOpen(true);
           } else {

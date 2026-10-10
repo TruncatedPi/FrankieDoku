@@ -8,13 +8,13 @@ import {
   validatePuzzleIntegrity,
 } from './solver';
 import { generateDailyPuzzle, generatePuzzle } from './generator';
-import { CAMPAIGN_LEVELS } from '../data/levels';
+import { CAMPAIGN_LEVELS, CAMPAIGNS, LEVELS_PER_CAMPAIGN } from '../data/levels';
 import { BoardCell, Puzzle } from './types';
 import { getTerritoryInfo, stripTerritoryTags } from './palettes';
 
 describe('Puzzle Integrity & Contradiction Verification', () => {
-  test('All 100 Campaign Levels must be 100% contradiction-free with strictly 1 unique solution', () => {
-    assert.strictEqual(CAMPAIGN_LEVELS.length, 100, 'Must have exactly 100 campaign levels');
+  test('All registered campaign levels must be 100% contradiction-free with strictly 1 unique solution', () => {
+    assert.strictEqual(CAMPAIGN_LEVELS.length, CAMPAIGNS.length * LEVELS_PER_CAMPAIGN, 'Each campaign must contain a full 100-level pack');
 
     for (const level of CAMPAIGN_LEVELS) {
       const integrity = validatePuzzleIntegrity(level);

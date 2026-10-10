@@ -9,7 +9,7 @@ import {
   generateHint,
 } from './solver';
 import { generateDailyPuzzle, generatePuzzle } from './generator';
-import { CAMPAIGN_LEVELS } from '../data/levels';
+import { CAMPAIGN_LEVELS, CAMPAIGNS, LEVELS_PER_CAMPAIGN } from '../data/levels';
 import { BoardCell, Puzzle } from './types';
 
 describe('Meowdoku Engine & Rules', () => {
@@ -84,7 +84,7 @@ describe('Meowdoku Engine & Rules', () => {
   });
 
   test('Campaign levels verification', () => {
-    assert.strictEqual(CAMPAIGN_LEVELS.length, 100, 'Must have exactly 100 campaign levels');
+    assert.strictEqual(CAMPAIGN_LEVELS.length, CAMPAIGNS.length * LEVELS_PER_CAMPAIGN, 'Each campaign must contain a full 100-level pack');
 
     // Test a sample of levels across tiers
     const sampleIndices = [0, 9, 15, 24, 30, 39, 45, 49, 55, 65, 75, 85, 95, 99];
