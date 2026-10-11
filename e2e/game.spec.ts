@@ -229,32 +229,44 @@ test('campaign set completion popup announces completed set and next set', async
   await expect(page.locator('[data-cell]')).toHaveCount(36); // 6x6
 });
 
-test('Campaign 1 completion celebrates its hundred levels and starts Campaign 2', async ({ page }) => {
-  const level100 = CAMPAIGN_LEVELS[99]; // Level 100 (Grandmaster final level)
-  await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(level100, 'campaign'));
+for (const [index, campaign] of CAMPAIGNS.slice(0, -1).entries()) {
+  test(`${campaign.name} completion celebrates its hundred levels and starts the next campaign`, async ({ page }) => {
+    const level = campaign.levels[99];
+    const next = CAMPAIGNS[index + 1];
+    await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(level, 'campaign'));
+    await page.goto('./');
+
+    for (const q of level.solution!) {
+      await page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`).click({ button: 'right', force: true });
+    }
+
+    await expect(page.getByText('Grand Champion! 👑')).toBeVisible();
+    await expect(page.getByText(`${campaign.name}: All 100 Levels Conquered!`)).toBeVisible();
+    await expect(page.getByText(/Grandmaster Set Complete!/i)).toBeVisible();
+
+    const nextCampaign = page.getByRole('button', { name: `Start ${next.name} (Level ${next.startLevel})` });
+    await expect(nextCampaign).toBeVisible();
+    await nextCampaign.press('Enter');
+    await expect(page.locator('[data-cell]')).toHaveCount(next.levels[0].size ** 2);
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_saved_session_v2')!).puzzle.id)).toBe(next.levels[0].id);
+  });
+}
+
+test('the latest campaign can be selected and restored with its own tier ranges', async ({ page }) => {
+  const campaign = CAMPAIGNS[CAMPAIGNS.length - 1];
   await page.goto('./');
-
-  for (const q of level100.solution!) {
-    await page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`).click({ button: 'right', force: true });
-  }
-
-  // Grand celebration screen
-  await expect(page.getByText('Grand Champion! 👑')).toBeVisible();
-  await expect(page.getByText('Campaign 1: All 100 Levels Conquered!')).toBeVisible();
-  await expect(page.getByText(/Grandmaster Set Complete!/i)).toBeVisible();
-
-  const nextCampaign = page.getByRole('button', { name: 'Start Campaign 2 (Level 101)' });
-  await expect(nextCampaign).toBeVisible();
-  await nextCampaign.press('Enter');
-  await expect(page.locator('[data-cell]')).toHaveCount(16);
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_saved_session_v2')!).puzzle.id)).toBe('level-101');
-
+  await page.getByRole('button', { name: 'Levels', exact: true }).press('Enter');
+  const overlay = page.getByRole('dialog', { name: 'Campaign Levels' });
+  const tabName = `${campaign.name} (${campaign.startLevel}–${campaign.endLevel})`;
+  await overlay.getByRole('tab', { name: tabName, exact: true }).press('Enter');
+  await overlay.getByRole('button', { name: new RegExp(`^Level ${campaign.startLevel}\\b`) }).press('Enter');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_saved_session_v2') || '{}').puzzle?.id)).toBe(campaign.levels[0].id);
+  await page.reload();
+  await page.getByRole('button', { name: 'Levels', exact: true }).press('Enter');
+  await expect(overlay.getByRole('tab', { name: tabName, exact: true })).toHaveAttribute('aria-selected', 'true');
+  await overlay.getByRole('button', { name: 'Grandmaster', exact: true }).press('Enter');
+  await expect(overlay.getByRole('button', { name: new RegExp(`^Level ${campaign.endLevel}\\b`) })).toBeVisible();
 });
-
-
-
-
-
 test('campaign overlay switches packs, mirrors tier ranges, and follows the active level on reopen', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: 'Levels', exact: true }).press('Enter');

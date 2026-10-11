@@ -1,5 +1,6 @@
 import { CAMPAIGN_1_LEVELS } from './campaigns/campaign-1';
 import { CAMPAIGN_2_LEVELS } from './campaigns/campaign-2';
+import { CAMPAIGN_3_LEVELS } from './campaigns/campaign-3';
 import { defineCampaign, type CampaignInfo, type CampaignLevel, type CampaignPack, type CampaignTierInfo } from './campaign-types';
 export { CAMPAIGN_TIERS, LEVELS_PER_CAMPAIGN, defineCampaign } from './campaign-types';
 export type { CampaignInfo, CampaignLevel, CampaignPack, CampaignTier, CampaignTierInfo } from './campaign-types';
@@ -8,6 +9,7 @@ export type { CampaignInfo, CampaignLevel, CampaignPack, CampaignTier, CampaignT
 export const CAMPAIGNS: CampaignPack[] = [
   defineCampaign(1, CAMPAIGN_1_LEVELS),
   defineCampaign(2, CAMPAIGN_2_LEVELS),
+  defineCampaign(3, CAMPAIGN_3_LEVELS),
 ];
 CAMPAIGNS.forEach((campaign, index) => {
   if (campaign.number !== index + 1) throw new Error('Campaign packs must be registered in consecutive order');

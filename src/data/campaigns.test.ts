@@ -59,6 +59,13 @@ test('milestones and next-level lookup handle both campaign boundaries and shift
   assert.equal(endOne.completedCampaign.number, 1);
   assert.equal(endOne.nextCampaign?.number, 2);
   assert.equal(endOne.nextLevelNumber, 101);
+  for (const [index, campaign] of CAMPAIGNS.slice(0, -1).entries()) {
+    const next = CAMPAIGNS[index + 1];
+    const milestone = getTierMilestone(campaign.levels[99].id)!;
+    assert.equal(getNextCampaignLevel(campaign.levels[99].id)?.id, next.levels[0].id);
+    assert.equal(milestone.nextCampaign?.id, next.id);
+    assert.equal(milestone.nextLevelNumber, next.startLevel);
+  }
   const secondTier = getTierMilestone('level-110')!;
   assert.equal(secondTier.completedTier.startLevel, 101);
   assert.equal(secondTier.completedTier.endLevel, 110);
@@ -96,5 +103,5 @@ test('the same authoring tool can create the next hundred-level pack without reu
     seen.add(mapFingerprint(level));
   }
   // The prospective pack is not registered or written by this test.
-  assert.equal(CAMPAIGNS.length, 2);
+  assert.equal(CAMPAIGNS.length, number - 1);
 });
