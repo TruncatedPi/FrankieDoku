@@ -41,6 +41,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       if (tierMilestone?.isFinalCampaignComplete) {
         // Grand celebration for completing a 100-level campaign
         confetti({
+          disableForReducedMotion: true,
           particleCount: 120,
           spread: 90,
           origin: { y: 0.5 },
@@ -48,6 +49,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
         });
         const timer = setTimeout(() => {
           confetti({
+            disableForReducedMotion: true,
             particleCount: 80,
             angle: 60,
             spread: 60,
@@ -55,6 +57,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             colors: ['#f59e0b', '#ec4899', '#3b82f6', '#fbbf24'],
           });
           confetti({
+            disableForReducedMotion: true,
             particleCount: 80,
             angle: 120,
             spread: 60,
@@ -66,6 +69,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       } else if (tierMilestone?.isTierComplete) {
         // Joyful celebratory confetti for completing a campaign set
         confetti({
+          disableForReducedMotion: true,
           particleCount: 100,
           spread: 80,
           origin: { y: 0.6 },
@@ -74,6 +78,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       } else {
         // Standard level victory confetti
         confetti({
+          disableForReducedMotion: true,
           particleCount: 70,
           spread: 65,
           origin: { y: 0.6 },
