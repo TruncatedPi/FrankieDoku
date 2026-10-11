@@ -32,6 +32,7 @@ export function App() {
     maxHearts,
     timerSeconds,
     isWon,
+    sessionId,
     isGameOver,
     history,
     redoStack,
@@ -68,6 +69,7 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isFreePlayOpen, setIsFreePlayOpen] = useState(false);
+  const [dismissedVictorySessionId, setDismissedVictorySessionId] = useState<string | null>(null);
 
   // Determine current active cat breed (supports two-player custom breeds)
   const activeBreed: CatBreed =
@@ -201,7 +203,7 @@ export function App() {
 
       {/* Victory Celebration Modal */}
       <VictoryModal
-        isOpen={isWon}
+        isOpen={isWon && dismissedVictorySessionId !== sessionId}
         timeSeconds={timerSeconds}
         bestTimeSeconds={
           gameMode === 'campaign' && currentLevel
@@ -214,14 +216,7 @@ export function App() {
         hasNextLevel={Boolean(hasNextLevel)}
         onNextLevel={handleNextLevel}
         onReplay={handleReset}
-        onClose={() => {
-          if (tierMilestone?.isFinalCampaignComplete && !tierMilestone.nextCampaign) {
-            handleStartFreePlay(7);
-            setIsFreePlayOpen(true);
-          } else {
-            setIsLevelsOpen(true);
-          }
-        }}
+        onClose={() => setDismissedVictorySessionId(sessionId)}
         catBreed={activeBreed}
         tierMilestone={tierMilestone}
         onEnterFreePlay={() => {

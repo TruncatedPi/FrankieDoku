@@ -285,7 +285,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               onClick={onClose}
               className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
-              <span>{isFinalCampaign ? tierMilestone?.nextCampaign ? 'Campaigns' : 'Free Play' : 'Close'}</span>
+              <span>Close</span>
             </button>
           </div>
         </div>

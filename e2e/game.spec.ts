@@ -80,6 +80,37 @@ test('campaign victory and replay keep best stars and increment attempts', async
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_stats_v1')!).gamesPlayed)).toBe(2);
 });
 
+for (const level of [CAMPAIGN_LEVELS[0], CAMPAIGN_LEVELS[9], CAMPAIGNS[0].levels[99], CAMPAIGNS[CAMPAIGNS.length - 1].levels[99]]) {
+  test(`closing victory leaves the completed level ${level.levelNumber} visible with every placement`, async ({ page }) => {
+    await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(level, 'campaign'));
+    await page.goto('./');
+    for (const q of level.solution!) await page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`).click({ button: 'right', force: true });
+    const victory = page.getByRole('dialog', { name: 'Victory Celebration' });
+    await expect(victory).toBeVisible();
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_saved_session_v2')!).isWon)).toBe(true);
+    const completed = await page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_saved_session_v2')!));
+
+    await victory.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByTestId('game-board')).toBeVisible();
+    for (const q of level.solution!) await expect(page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`)).toHaveAttribute('data-state', 'cat');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_saved_session_v2')!))).toEqual(completed);
+
+    // Other overlays can still be used without reopening the dismissed celebration.
+    await page.getByRole('button', { name: 'Levels', exact: true }).press('Enter');
+    await page.getByRole('button', { name: 'Close Campaign Levels' }).press('Enter');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    if (level.levelNumber === 1) {
+      // A fresh attempt at the same level gets its own celebration.
+      await page.getByRole('button', { name: 'Reset', exact: true }).click();
+      for (const q of level.solution!) await page.locator(`[data-row="${q.row}"][data-col="${q.col}"]`).click({ button: 'right' });
+      await expect(victory).toBeVisible();
+      await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_stats_v1')!).gamesWon)).toBe(2);
+    }
+  });
+}
+
 test('seeded generation matches Node in each browser engine through size 12', async ({ page }) => {
   await page.goto('http://127.0.0.1:3173');
   for (const size of [4, 9, 12]) {
