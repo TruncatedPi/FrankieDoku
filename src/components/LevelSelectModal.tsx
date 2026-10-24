@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { X, Star, Lock, CheckCircle2, Trophy, Clock } from 'lucide-react';
 import { LevelProgress } from '../engine/types';
 import { CAMPAIGNS, CAMPAIGN_LEVELS, getCampaignForLevel, type CampaignLevel, type CampaignTier } from '../data/levels';
@@ -20,12 +20,18 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
 }) => {
   const [selectedCampaignId, setSelectedCampaignId] = useState(() => getCampaignForLevel(currentLevelId)?.id ?? CAMPAIGNS[0].id);
   const [selectedTier, setSelectedTier] = useState<CampaignTier>('Kitten');
+  const tabListRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!isOpen) return;
     const campaign = getCampaignForLevel(currentLevelId) ?? CAMPAIGNS[0];
     setSelectedCampaignId(campaign.id);
     setSelectedTier(campaign.levels.find(level => level.id === currentLevelId)?.tier ?? 'Kitten');
   }, [isOpen, currentLevelId]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const activeTab = tabListRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    activeTab?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }, [isOpen, selectedCampaignId]);
   const selectedCampaign = CAMPAIGNS.find(campaign => campaign.id === selectedCampaignId) ?? CAMPAIGNS[0];
   const completedCount = selectedCampaign.levels.filter(level => progressMap[level.id]?.completed).length;
 
@@ -70,16 +76,76 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
         </div>
 
         {/* Campaign overlay selector: only the selected pack is displayed. */}
-        <div role="tablist" aria-label="Campaigns" className="flex gap-2 overflow-x-auto pb-1 shrink-0">
-          {CAMPAIGNS.map(campaign => <button
-            key={campaign.id} type="button" role="tab" aria-selected={campaign.id === selectedCampaign.id}
-            onClick={() => setSelectedCampaignId(campaign.id)}
-            className={`shrink-0 rounded-xl border px-3 py-2 text-xs font-bold ${campaign.id === selectedCampaign.id ? 'bg-amber-500 text-white border-amber-600' : 'border-slate-200 dark:border-white/10'}`}
-          >{campaign.name} ({campaign.startLevel}–{campaign.endLevel})</button>)}
+        <div className="flex flex-col gap-1.5 shrink-0">
+          <div
+            ref={tabListRef}
+            role="tablist"
+            aria-label="Campaigns"
+            className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/80 dark:bg-white/5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
+          >
+            {CAMPAIGNS.map(campaign => {
+              const isSelected = campaign.id === selectedCampaign.id;
+              const campaignCompleted = campaign.levels.filter(lvl => progressMap[lvl.id]?.completed).length;
+              const isAllDone = campaignCompleted === campaign.levelCount;
+
+              return (
+                <button
+                  key={campaign.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  aria-label={`${campaign.name} (${campaign.startLevel}–${campaign.endLevel})`}
+                  onClick={() => setSelectedCampaignId(campaign.id)}
+                  className={`snap-start shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-amber-500 text-white shadow-sm ring-1 ring-amber-600/30 dark:ring-amber-400/40'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10'
+                  }`}
+                >
+                  <span>{campaign.name} ({campaign.startLevel}–{campaign.endLevel})</span>
+                  {isAllDone ? (
+                    <span
+                      aria-hidden="true"
+                      className={`text-[10px] px-1 py-0.5 rounded-full font-bold leading-none ${
+                        isSelected
+                          ? 'bg-amber-600 text-amber-100'
+                          : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      ✓
+                    </span>
+                  ) : campaignCompleted > 0 ? (
+                    <span
+                      aria-hidden="true"
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-medium leading-none ${
+                        isSelected
+                          ? 'bg-amber-600 text-amber-100'
+                          : 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {campaignCompleted}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 pt-0.5">
+            <span aria-live="polite">
+              {selectedCampaign.name}: {completedCount} / {selectedCampaign.levelCount} completed
+            </span>
+            <span className="font-mono text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+              {Math.round((completedCount / selectedCampaign.levelCount) * 100)}%
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
+            <div
+              className="bg-amber-500 h-full rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${(completedCount / selectedCampaign.levelCount) * 100}%` }}
+            />
+          </div>
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400" aria-live="polite">
-          {selectedCampaign.name}: {completedCount} / {selectedCampaign.levelCount} completed
-        </p>
         {/* Tier Tabs */}
         <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/80 dark:bg-white/5 text-xs font-semibold overflow-x-auto no-scrollbar scroll-smooth">
           {selectedCampaign.tiers.map((tier) => (

@@ -42,3 +42,13 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(217, 119, 6, 0.45);
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
