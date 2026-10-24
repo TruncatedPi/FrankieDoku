@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useGameState } from './hooks/useGameState';
+import { isWithinBoardTapGuard } from './utils/interactionGuard';
 import { Header } from './components/Header';
 import { Board } from './components/Board';
 import { Controls } from './components/Controls';
@@ -70,6 +71,29 @@ export function App() {
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isFreePlayOpen, setIsFreePlayOpen] = useState(false);
   const [dismissedVictorySessionId, setDismissedVictorySessionId] = useState<string | null>(null);
+  const armedGameOverButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    armedGameOverButtonRef.current = null;
+  }, [isGameOver, sessionId]);
+
+  const handleGameOverButtonPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button === 0 && !isWithinBoardTapGuard()) {
+      armedGameOverButtonRef.current = e.currentTarget;
+    } else {
+      armedGameOverButtonRef.current = null;
+    }
+  };
+
+  const handleGuardedGameOverAction = (action: () => void) => (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (e.detail > 0 && (armedGameOverButtonRef.current !== e.currentTarget || isWithinBoardTapGuard())) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    armedGameOverButtonRef.current = null;
+    action();
+  };
 
   // Determine current active cat breed (supports two-player custom breeds)
   const activeBreed: CatBreed =
@@ -78,7 +102,7 @@ export function App() {
       : settings.catBreed;
 
   return (
-    <div className="min-h-screen min-h-[100dvh] w-full flex flex-col justify-start overflow-x-hidden overflow-y-auto bg-gradient-to-b from-[#fdf8f4] to-[#fbf1e8] dark:from-[#1a1926] dark:to-[#12111a] text-slate-800 dark:text-slate-100 font-bubble transition-colors duration-300 pt-[max(0.5rem,calc(env(safe-area-inset-top)+0.25rem))] pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+0.75rem))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+    <div className="min-h-screen min-h-[100dvh] w-full flex flex-col justify-start overflow-x-hidden overflow-y-auto bg-gradient-to-b from-[#fdf8f4] to-[#fbf1e8] dark:from-[#1a1926] dark:to-[#12111a] text-slate-800 dark:text-slate-100 font-bubble transition-colors duration-300 pt-[max(0.5rem,calc(env(safe-area-inset-top)+0.25rem))] pb-[max(0.5rem,calc(env(safe-area-inset-bottom)+0.25rem))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       {/* Header */}
       <Header
         gameMode={gameMode}
@@ -104,12 +128,12 @@ export function App() {
       />
 
       {/* Main Game Area */}
-      <main className="flex-1 w-full max-w-[min(94vw,500px)] mx-auto flex flex-col items-center justify-start px-2 pt-1 pb-1 gap-1.5 sm:gap-2">
+      <main className="flex-1 w-full max-w-[540px] mx-auto flex flex-col items-center justify-start px-1 sm:px-3 pt-0.5 pb-1 gap-1.5 sm:gap-2">
         {isGenerating && <p role="status" className="text-sm font-bold text-amber-700">Creating your map…</p>}
         {generationError && <p role="alert" className="text-sm text-rose-700">{generationError} Choose a board size or daily date to retry.</p>}
         {/* Two Player Active Turn Banner */}
         {gameMode === 'twoplayer' && twoPlayerConfig && (
-          <div className="w-full max-w-[min(92vw,480px)] p-2 rounded-2xl bg-amber-500/10 dark:bg-white/5 border border-amber-400/40 flex items-center justify-between animate-pop-in">
+          <div className="w-full max-w-[520px] p-2 rounded-2xl bg-amber-500/10 dark:bg-white/5 border border-amber-400/40 flex items-center justify-between animate-pop-in">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-white dark:bg-white/10 p-1 shadow-sm">
                 <CatIcon breed={activeBreed} expression="happy" />
@@ -179,7 +203,8 @@ export function App() {
             <div className="w-full flex flex-col gap-2 mt-2">
               <button
                 type="button"
-                onClick={handleReset}
+                onPointerDown={handleGameOverButtonPointerDown}
+                onClick={handleGuardedGameOverAction(handleReset)}
                 className="w-full py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -188,10 +213,11 @@ export function App() {
 
               <button
                 type="button"
-                onClick={() => {
+                onPointerDown={handleGameOverButtonPointerDown}
+                onClick={handleGuardedGameOverAction(() => {
                   handleUpdateSettings({ playStyle: 'zen' });
                   handleReset();
-                }}
+                })}
                 className="w-full py-2.5 px-4 rounded-2xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-semibold text-xs"
               >
                 Switch to Zen Mode (No Lives)

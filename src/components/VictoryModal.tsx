@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { Trophy, Clock, Heart, ArrowRight, RotateCcw, Sparkles, Crown, Play } from 'lucide-react';
 import { CatBreed } from '../engine/types';
 import { CatIcon } from './CatIcon';
 import type { TierMilestone } from '../data/levels';
+import { isWithinBoardTapGuard } from '../utils/interactionGuard';
 
 interface VictoryModalProps {
   isOpen: boolean;
@@ -36,8 +37,13 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   tierMilestone = null,
   onEnterFreePlay,
 }) => {
+  const armedButtonRef = useRef<HTMLButtonElement | null>(null);
+  const guardUntilRef = useRef<number>(0);
+
   useEffect(() => {
+    armedButtonRef.current = null;
     if (isOpen) {
+      guardUntilRef.current = isWithinBoardTapGuard(1000) ? Date.now() + 550 : 0;
       if (tierMilestone?.isFinalCampaignComplete) {
         // Grand celebration for completing a 100-level campaign
         confetti({
@@ -96,9 +102,32 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
     return `${mins.toString().padStart(2, '0')}:${rem.toString().padStart(2, '0')}`;
   };
 
-  const isNewBest = bestTimeSeconds ? timeSeconds <= bestTimeSeconds : true;
+  const isNewBest = bestTimeSeconds !== undefined ? timeSeconds <= bestTimeSeconds : true;
   const isFinalCampaign = Boolean(tierMilestone?.isFinalCampaignComplete);
   const isTierComplete = Boolean(tierMilestone?.isTierComplete && !isFinalCampaign);
+
+  // Taps that land within the guard window (a double-tap bounce or the browser's
+  // synthesized click from the tap that placed the final cat) must never trigger
+  // Next Level / Replay. A click also requires a fresh pointerdown on the same button.
+  const isGuarded = () => Date.now() < guardUntilRef.current || isWithinBoardTapGuard();
+
+  const handleButtonPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button === 0 && !isGuarded()) {
+      armedButtonRef.current = e.currentTarget;
+    } else {
+      armedButtonRef.current = null;
+    }
+  };
+
+  const handleGuardedAction = (action: () => void) => (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (e.detail > 0 && (armedButtonRef.current !== e.currentTarget || isGuarded())) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    armedButtonRef.current = null;
+    action();
+  };
 
   return (
     <div
@@ -240,15 +269,20 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
         {/* Action Buttons */}
         <div className="w-full flex flex-col gap-2 mt-1">
           {isFinalCampaign && tierMilestone?.nextCampaign ? (
-            <button type="button" onClick={onNextLevel}
-              className="w-full py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onPointerDown={handleButtonPointerDown}
+              onClick={handleGuardedAction(onNextLevel)}
+              className="w-full py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2"
+            >
               <span>Start {tierMilestone.nextCampaign.name} (Level {tierMilestone.nextLevelNumber})</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : isFinalCampaign ? (
             <button
               type="button"
-              onClick={onEnterFreePlay || onClose}
+              onPointerDown={handleButtonPointerDown}
+              onClick={handleGuardedAction(onEnterFreePlay || onClose)}
               className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 active:scale-95 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <Play className="w-4 h-4 fill-white" />
@@ -258,7 +292,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           ) : isTierComplete && tierMilestone?.nextTier ? (
             <button
               type="button"
-              onClick={onNextLevel}
+              onPointerDown={handleButtonPointerDown}
+              onClick={handleGuardedAction(onNextLevel)}
               className="w-full py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <span>Start {tierMilestone.nextTier.name} Set (Level {tierMilestone.nextLevelNumber})</span>
@@ -267,7 +302,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           ) : hasNextLevel ? (
             <button
               type="button"
-              onClick={onNextLevel}
+              onPointerDown={handleButtonPointerDown}
+              onClick={handleGuardedAction(onNextLevel)}
               className="w-full py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <span>Next Level</span>
@@ -278,7 +314,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           <div className="w-full flex gap-2">
             <button
               type="button"
-              onClick={onReplay}
+              onPointerDown={handleButtonPointerDown}
+              onClick={handleGuardedAction(onReplay)}
               className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -287,7 +324,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
             <button
               type="button"
-              onClick={onClose}
+              onPointerDown={handleButtonPointerDown}
+              onClick={handleGuardedAction(onClose)}
               className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <span>Close</span>

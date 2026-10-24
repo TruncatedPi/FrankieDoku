@@ -33,7 +33,7 @@ export const Controls: React.FC<ControlsProps> = ({
   remainingCats,
 }) => {
   return (
-    <div className="w-full max-w-[min(94vw,480px)] mx-auto mt-1 sm:mt-2 px-2 flex flex-col gap-1.5 sm:gap-2.5 select-none shrink-0">
+    <div className="w-full max-w-[520px] mx-auto mt-0.5 sm:mt-2 px-1 sm:px-2 flex flex-col gap-1.5 sm:gap-2.5 select-none shrink-0">
       {/* Primary Input Mode Toggle (Single-tap friendly for phones & tablets) */}
       <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-slate-200/60 dark:border-white/10 shadow-sm">
         <div

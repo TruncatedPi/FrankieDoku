@@ -164,4 +164,18 @@ test('getTierMilestone identifies intermediate tier completion and final campaig
   assert.equal(m100.nextLevelNumber, 101);
 });
 
+test('board tap interaction guard suppresses premature modal activations within window', async () => {
+  const { recordBoardPrimaryPointerDown, isWithinBoardTapGuard, resetBoardTapGuard } = await import('../utils/interactionGuard');
+  resetBoardTapGuard();
+  assert.equal(isWithinBoardTapGuard(500, 1000), false);
+
+  recordBoardPrimaryPointerDown(1000);
+  assert.equal(isWithinBoardTapGuard(500, 1000), true);
+  assert.equal(isWithinBoardTapGuard(500, 1250), true);
+  assert.equal(isWithinBoardTapGuard(500, 1499), true);
+  assert.equal(isWithinBoardTapGuard(500, 1500), false);
+  resetBoardTapGuard();
+});
+
+
 

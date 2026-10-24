@@ -1,7 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { BoardCell, CatBreed, HintInvolvedCell, HintResult, InputMode, Puzzle, ThemePalette } from '../engine/types';
 import { CatIcon } from './CatIcon';
-import { X, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { REGION_PALETTES } from '../engine/palettes';
+import { recordBoardPrimaryPointerDown } from '../utils/interactionGuard';
 
 interface BoardProps {
   puzzle: Puzzle;
@@ -19,9 +21,6 @@ interface BoardProps {
   playerBreeds?: Record<1 | 2, CatBreed>;
   activeHint?: HintResult | null;
 }
-
-import { REGION_PALETTES } from '../engine/palettes';
-
 
 export const Board: React.FC<BoardProps> = ({
   puzzle,
@@ -41,6 +40,8 @@ export const Board: React.FC<BoardProps> = ({
 }) => {
   const size = puzzle.size;
   const palette = REGION_PALETTES[theme] || REGION_PALETTES.cozy;
+  const isLargeGrid = size >= 9;
+  const regionBorderWidth = isLargeGrid ? '1.75px' : '2.5px';
 
   const involvedMap = React.useMemo(() => {
     const map = new Map<string, HintInvolvedCell>();
@@ -55,7 +56,14 @@ export const Board: React.FC<BoardProps> = ({
   const isDragging = useRef(false);
   const dragStartCellRef = useRef<{ row: number; col: number } | null>(null);
   const lastHoveredCellRef = useRef<{ row: number; col: number } | null>(null);
-  const lastTappedRef = useRef<{ row: number; col: number; time: number; wasEmpty: boolean; wasCat: boolean } | null>(null);
+  const lastTappedRef = useRef<{
+    row: number;
+    col: number;
+    time: number;
+    wasEmpty: boolean;
+    wasCat: boolean;
+    justPlacedCat?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     lastTappedRef.current = null;
@@ -74,21 +82,35 @@ export const Board: React.FC<BoardProps> = ({
     }
     if (!e.isPrimary) return;
 
+    const now = Date.now();
+    recordBoardPrimaryPointerDown(now);
+
     isDragging.current = true;
     dragStartCellRef.current = { row, col };
     lastHoveredCellRef.current = { row, col };
 
     const cellState = cells[row * size + col]?.state;
-    const now = Date.now();
     const last = lastTappedRef.current;
+
+    // Ignore accidental bounce taps (under 320ms) on the same cell right after placing a cat
+    if (last && last.justPlacedCat && last.row === row && last.col === col && now - last.time < 320) {
+      return;
+    }
 
     // Detect double-tap timing (under 320ms on same empty cell to place a cat)
     if (last && last.wasEmpty && last.row === row && last.col === col && now - last.time < 320) {
-      lastTappedRef.current = null;
+      lastTappedRef.current = {
+        row,
+        col,
+        time: now,
+        wasEmpty: false,
+        wasCat: true,
+        justPlacedCat: true,
+      };
       if (inputMode === 'mark') {
         onCellAction(row, col, 'doubleTap');
-        return;
       }
+      return;
     }
 
     lastTappedRef.current = {
@@ -97,6 +119,7 @@ export const Board: React.FC<BoardProps> = ({
       time: now,
       wasEmpty: cellState === 'empty',
       wasCat: cellState === 'cat',
+      justPlacedCat: inputMode === 'cat' && cellState !== 'cat',
     };
     onCellAction(row, col, 'tap');
   };
@@ -118,6 +141,11 @@ export const Board: React.FC<BoardProps> = ({
 
   useEffect(() => {
     const handlePointerUp = () => {
+      if (isDragging.current && lastTappedRef.current) {
+        const now = Date.now();
+        lastTappedRef.current.time = now;
+        recordBoardPrimaryPointerDown(now);
+      }
       isDragging.current = false;
       dragStartCellRef.current = null;
       lastHoveredCellRef.current = null;
@@ -142,10 +170,10 @@ export const Board: React.FC<BoardProps> = ({
   return (
     <div
       data-testid="game-board"
-      className="relative w-full aspect-square mx-auto touch-none select-none rounded-3xl p-2.5 sm:p-3 shadow-xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-amber-900/10 dark:border-white/10 transition-all duration-300 shrink-0"
+      className="relative w-full aspect-square mx-auto touch-none select-none rounded-2xl sm:rounded-3xl p-1 sm:p-2.5 shadow-xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-amber-900/10 dark:border-white/10 transition-all duration-300 shrink-0"
       style={{
-        maxWidth: 'min(92vw, 460px, calc(100dvh - 280px))',
-        maxHeight: 'min(92vw, 460px, calc(100dvh - 280px))',
+        maxWidth: 'min(calc(100vw - 8px), 520px, calc(100dvh - 236px))',
+        maxHeight: 'min(calc(100vw - 8px), 520px, calc(100dvh - 236px))',
       }}
       onContextMenu={(e) => e.preventDefault()}
       aria-busy={disabled}
@@ -158,7 +186,7 @@ export const Board: React.FC<BoardProps> = ({
       }}
     >
       <div
-        className="w-full h-full grid rounded-2xl overflow-hidden shadow-inner border-2 border-black dark:border-black"
+        className="w-full h-full grid rounded-xl sm:rounded-2xl overflow-hidden shadow-inner border-2 border-black dark:border-black"
         style={{
           gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
@@ -228,19 +256,19 @@ export const Board: React.FC<BoardProps> = ({
               }`}
               style={{
                 backgroundColor: cell.hasConflict && highlightConflicts ? undefined : bgCol,
-                borderTopWidth: hasTopBorder ? '2.5px' : '0.5px',
-                borderBottomWidth: hasBottomBorder ? '2.5px' : '0.5px',
-                borderLeftWidth: hasLeftBorder ? '2.5px' : '0.5px',
-                borderRightWidth: hasRightBorder ? '2.5px' : '0.5px',
-                borderTopColor: hasTopBorder ? '#000000' : '#000000',
-                borderBottomColor: hasBottomBorder ? '#000000' : '#000000',
-                borderLeftColor: hasLeftBorder ? '#000000' : '#000000',
-                borderRightColor: hasRightBorder ? '#000000' : '#000000',
+                borderTopWidth: hasTopBorder ? regionBorderWidth : '0.5px',
+                borderBottomWidth: hasBottomBorder ? regionBorderWidth : '0.5px',
+                borderLeftWidth: hasLeftBorder ? regionBorderWidth : '0.5px',
+                borderRightWidth: hasRightBorder ? regionBorderWidth : '0.5px',
+                borderTopColor: '#000000',
+                borderBottomColor: '#000000',
+                borderLeftColor: '#000000',
+                borderRightColor: '#000000',
               }}
             >
               {/* Placed Cat Sprite */}
               {cell.state === 'cat' && (
-                <div className="w-[84%] h-[84%] animate-pop-in flex items-center justify-center drop-shadow-md">
+                <div className={`${isLargeGrid ? 'w-[90%] h-[90%]' : 'w-[84%] h-[84%]'} animate-pop-in flex items-center justify-center drop-shadow-md`}>
                   <CatIcon
                     breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
                     hasConflict={Boolean((cell.hasConflict && highlightConflicts) || isConflictInvolved)}
@@ -251,7 +279,7 @@ export const Board: React.FC<BoardProps> = ({
 
               {/* Faded Ghost Cat (Hint preview) */}
               {showFadedCat && (
-                <div className="w-[84%] h-[84%] flex items-center justify-center opacity-50 scale-90 pointer-events-none animate-pulse drop-shadow-sm">
+                <div className={`${isLargeGrid ? 'w-[90%] h-[90%]' : 'w-[84%] h-[84%]'} flex items-center justify-center opacity-50 scale-90 pointer-events-none animate-pulse drop-shadow-sm`}>
                   <CatIcon
                     breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
                     hasConflict={false}
@@ -328,8 +356,8 @@ export const Board: React.FC<BoardProps> = ({
 
               {/* Hint Sparkle Indicator on primary hinted cell */}
               {isPrimaryHint && (
-                <div className="absolute top-1 right-1 text-amber-500 animate-bounce">
-                  <Sparkles className="w-3.5 h-3.5 fill-amber-400" />
+                <div className={`absolute ${isLargeGrid ? 'top-0.5 right-0.5' : 'top-1 right-1'} text-amber-500 animate-bounce`}>
+                  <Sparkles className={`${isLargeGrid ? 'w-2.5 h-2.5 sm:w-3.5 sm:h-3.5' : 'w-3.5 h-3.5'} fill-amber-400`} />
                 </div>
               )}
             </button>

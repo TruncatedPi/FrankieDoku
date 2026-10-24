@@ -141,7 +141,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                 </p>
 
                 {/* Best Time if completed */}
-                {isCompleted && prog?.bestTimeSeconds ? (
+                {isCompleted && prog?.bestTimeSeconds !== undefined ? (
                   <div className="flex items-center gap-1 text-[10px] text-emerald-700 dark:text-emerald-300 font-mono mt-0.5">
                     <Clock className="w-3 h-3" />
                     <span>Best: {formatTime(prog.bestTimeSeconds)}</span>
