@@ -46,7 +46,7 @@ export function useGameState() {
 
   useEffect(() => { saveSettings(settings); sound.setMuted(!settings.soundEnabled); sound.setVolume(settings.volume);
     sound.setHapticsEnabled(settings.hapticsEnabled);
-    document.documentElement.classList.toggle('dark', settings.theme === 'midnight');
+    document.documentElement.classList.toggle('dark', Boolean(settings.darkMode));
   }, [settings]);
   useEffect(() => { saveStats(stats); }, [stats]);
   useEffect(() => { saveCampaignProgress(campaignProgress); }, [campaignProgress]);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { GameMode, PlayStyle, CatBreed, HintResult, ThemePalette } from '../engine/types';
 import { getTerritoryInfo } from '../engine/palettes';
-import { Volume2, VolumeX, Settings, Heart, Calendar, Grid, Download, Users, RefreshCw, Sparkles, X } from 'lucide-react';
+import { Volume2, VolumeX, Settings, Heart, Calendar, Grid, Download, Users, RefreshCw, Sparkles, X, Moon, Sun } from 'lucide-react';
 import { CatIcon } from './CatIcon';
 import { APP_VERSION } from '../utils/version';
 
@@ -16,6 +16,8 @@ interface HeaderProps {
   timerSeconds: number;
   soundEnabled: boolean;
   onToggleSound: () => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
   onOpenLevels: () => void;
   onOpenDaily: () => void;
   onOpenSettings: () => void;
@@ -79,6 +81,8 @@ export const Header: React.FC<HeaderProps> = ({
   timerSeconds,
   soundEnabled,
   onToggleSound,
+  darkMode = false,
+  onToggleDarkMode,
   onOpenLevels,
   onOpenDaily,
   onOpenSettings,
@@ -158,6 +162,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
+
+          {onToggleDarkMode && (
+            <button
+              type="button"
+              onClick={onToggleDarkMode}
+              className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+            </button>
+          )}
 
           <button
             type="button"

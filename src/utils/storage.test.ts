@@ -34,6 +34,24 @@ test('malformed JSON and wrong-shaped settings/progress recover without crashing
   }
   data.set('meowdoku_settings_v1', JSON.stringify({ theme: 'ocean' }));
   assert.equal(loadSettings().theme, 'ocean');
+
+  // Verify Dark Mode works on any palette and persists correctly
+  data.set('meowdoku_settings_v1', JSON.stringify({ theme: 'cozy', darkMode: true }));
+  assert.equal(loadSettings().theme, 'cozy');
+  assert.equal(loadSettings().darkMode, true);
+
+  data.set('meowdoku_settings_v1', JSON.stringify({ theme: 'pastel', darkMode: true }));
+  assert.equal(loadSettings().theme, 'pastel');
+  assert.equal(loadSettings().darkMode, true);
+
+  data.set('meowdoku_settings_v1', JSON.stringify({ theme: 'midnight', darkMode: false }));
+  assert.equal(loadSettings().theme, 'midnight');
+  assert.equal(loadSettings().darkMode, false);
+
+  // Legacy midnight without explicit darkMode defaults to true
+  data.set('meowdoku_settings_v1', JSON.stringify({ theme: 'midnight' }));
+  assert.equal(loadSettings().darkMode, true);
+
   data.set('meowdoku_campaign_v1', JSON.stringify({ 'level-1': null }));
   assert.deepEqual(loadCampaignProgress(), {});
 });

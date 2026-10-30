@@ -309,3 +309,39 @@ test('the last campaign celebrates its own hundred levels and offers Free Play',
   await page.getByRole('button', { name: 'Enter Free Play Mode' }).press('Enter');
   await expect(page.getByRole('dialog', { name: 'Free Play' })).toBeVisible();
 });
+
+test('dark mode can be toggled independently on any color palette', async ({ page }) => {
+  await page.goto('./');
+  // Initially light mode
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
+
+  // Toggle Dark Mode via header quick toggle
+  await page.getByRole('button', { name: 'Switch to Dark Mode' }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_settings_v1')!).darkMode)).toBe(true);
+
+  // Open settings, change palette across multiple themes while remaining in Dark Mode
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settingsModal = page.locator('div.fixed');
+  await settingsModal.getByRole('button', { name: /Sweet Pastel/ }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  await settingsModal.getByRole('button', { name: /Matcha Nature/ }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  await settingsModal.getByRole('button', { name: /Ocean Breeze/ }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  // Switch to Light Mode inside Settings
+  await settingsModal.getByRole('button', { name: 'Light', exact: true }).click();
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meowdoku_settings_v1')!).darkMode)).toBe(false);
+
+  // Select Twilight Neon while in Light Mode - remains in Light Mode
+  await settingsModal.getByRole('button', { name: /Twilight Neon/ }).click();
+  await expect(page.locator('html')).not.toHaveClass(/dark/);
+
+  // Switch to Dark Mode on Twilight Neon
+  await settingsModal.getByRole('button', { name: 'Dark', exact: true }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+});

@@ -11,7 +11,7 @@ const STATS_KEY = 'meowdoku_stats_v1';
 const SAVED_GAME_KEY = 'meowdoku_saved_session_v2';
 export const DEFAULT_SETTINGS: UserSettings = {
   soundEnabled: true, hapticsEnabled: true, volume: 0.6, playStyle: 'classic',
-  autoCross: true, highlightConflicts: true, dimCompleted: true, catBreed: 'frankie', theme: 'cozy',
+  autoCross: true, highlightConflicts: true, dimCompleted: true, catBreed: 'frankie', theme: 'cozy', darkMode: false,
 };
 export const DEFAULT_STATS: GameStats = { gamesPlayed: 0, gamesWon: 0, currentDailyStreak: 0, maxDailyStreak: 0, bestTimesBySize: {} };
 const breeds = ['frankie', 'frankie_reimagined', 'capybara', 'shiba', 'axolotl', 'frog', 'hamster', 'orange_tabby', 'calico', 'tuxedo', 'siamese', 'black_cat', 'gray_fluff'];
@@ -35,6 +35,11 @@ export function sanitizeSettings(value: unknown): UserSettings {
   if (value.playStyle === 'classic' || value.playStyle === 'zen') result.playStyle = value.playStyle;
   if (breeds.includes(value.catBreed as string)) result.catBreed = value.catBreed as UserSettings['catBreed'];
   if (themes.includes(value.theme as string)) result.theme = value.theme as UserSettings['theme'];
+  if (typeof value.darkMode === 'boolean') {
+    result.darkMode = value.darkMode;
+  } else if (value.theme === 'midnight') {
+    result.darkMode = true;
+  }
   return result;
 }
 export const loadSettings = () => sanitizeSettings(read(SETTINGS_KEY));

@@ -115,6 +115,8 @@ export function App() {
         timerSeconds={timerSeconds}
         soundEnabled={settings.soundEnabled}
         onToggleSound={() => handleUpdateSettings({ soundEnabled: !settings.soundEnabled })}
+        darkMode={settings.darkMode}
+        onToggleDarkMode={() => handleUpdateSettings({ darkMode: !settings.darkMode })}
         onOpenLevels={() => setIsLevelsOpen(true)}
         onOpenDaily={() => setIsDailyOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}

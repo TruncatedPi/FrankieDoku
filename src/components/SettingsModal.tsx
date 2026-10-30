@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Volume2, VolumeX, Heart, Shield, Sparkles, Palette, Trash2 } from 'lucide-react';
+import { X, Volume2, VolumeX, Heart, Shield, Sparkles, Palette, Trash2, Moon, Sun } from 'lucide-react';
 import { UserSettings, CatBreed, PlayStyle, ThemePalette } from '../engine/types';
 import { CatIcon } from './CatIcon';
 import { APP_VERSION } from '../utils/version';
@@ -266,6 +266,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Appearance & Dark Mode Toggle */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-white/5 border border-amber-200/60 dark:border-white/10 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-bold text-slate-800 dark:text-slate-100 block text-sm">
+                  Appearance
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Toggle Dark Mode for any board palette
+                </span>
+              </div>
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-200/70 dark:bg-white/10">
+                <button
+                  type="button"
+                  onClick={() => onUpdateSettings({ darkMode: false })}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    !settings.darkMode
+                      ? 'bg-white text-amber-900 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                  aria-pressed={!settings.darkMode}
+                >
+                  <Sun className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Light</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdateSettings({ darkMode: true })}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    settings.darkMode
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                  aria-pressed={settings.darkMode}
+                >
+                  <Moon className="w-3.5 h-3.5 text-amber-200" />
+                  <span>Dark</span>
+                </button>
+              </div>
             </div>
           </div>
 

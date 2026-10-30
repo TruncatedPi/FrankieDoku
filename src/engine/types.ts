@@ -67,6 +67,7 @@ export interface UserSettings {
   dimCompleted: boolean;
   catBreed: CatBreed;
   theme: ThemePalette;
+  darkMode: boolean;
 }
 
 export interface LevelProgress {
