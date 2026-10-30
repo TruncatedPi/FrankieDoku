@@ -25,6 +25,15 @@ test('malformed JSON and wrong-shaped settings/progress recover without crashing
   assert.equal(loadSettings().volume, 1);
   assert.equal(loadSettings().autoCross, false);
   assert.equal(loadSettings().catBreed, 'frankie');
+  assert.equal(loadSettings().theme, 'cozy');
+
+  // Verify new animals and ocean theme persist and sanitize correctly
+  for (const breed of ['frankie_reimagined', 'capybara', 'shiba', 'axolotl', 'frog', 'hamster'] as const) {
+    data.set('meowdoku_settings_v1', JSON.stringify({ catBreed: breed }));
+    assert.equal(loadSettings().catBreed, breed);
+  }
+  data.set('meowdoku_settings_v1', JSON.stringify({ theme: 'ocean' }));
+  assert.equal(loadSettings().theme, 'ocean');
   data.set('meowdoku_campaign_v1', JSON.stringify({ 'level-1': null }));
   assert.deepEqual(loadCampaignProgress(), {});
 });

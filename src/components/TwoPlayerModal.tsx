@@ -18,6 +18,12 @@ interface TwoPlayerModalProps {
 
 const BREEDS: { id: CatBreed; label: string }[] = [
   { id: 'frankie', label: 'Frankie (Best Dog)' },
+  { id: 'frankie_reimagined', label: 'Frankie (Joyful Blep)' },
+  { id: 'capybara', label: 'Chill Capybara' },
+  { id: 'shiba', label: 'Derpy Shiba' },
+  { id: 'axolotl', label: 'Goofy Axolotl' },
+  { id: 'frog', label: 'Derpy Frog' },
+  { id: 'hamster', label: 'Chubby Hamster' },
   { id: 'orange_tabby', label: 'Ginger Tabby' },
   { id: 'calico', label: 'Sweet Calico' },
   { id: 'tuxedo', label: 'Tuxedo' },

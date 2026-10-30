@@ -14,6 +14,12 @@ interface SettingsModalProps {
 
 const BREEDS: { id: CatBreed; name: string; desc: string }[] = [
   { id: 'frankie', name: 'Frankie (Best Dog)', desc: 'Fluffy, happy Sheltie 🐶' },
+  { id: 'frankie_reimagined', name: 'Frankie (Joyful Blep)', desc: 'Re-imagined pose & big smile 🐶' },
+  { id: 'capybara', name: 'Chill Capybara', desc: 'Pure zen with a yuzu 🍊' },
+  { id: 'shiba', name: 'Derpy Shiba', desc: 'Squishy cheeks & doge grin 🐕' },
+  { id: 'axolotl', name: 'Goofy Axolotl', desc: 'Pink aquatic cutie 🫧' },
+  { id: 'frog', name: 'Derpy Frog', desc: 'Big eyes & goofy wide grin 🐸' },
+  { id: 'hamster', name: 'Chubby Hamster', desc: 'Puffy cheeks full of seeds 🐹' },
   { id: 'orange_tabby', name: 'Ginger Tabby', desc: 'Warm & adventurous' },
   { id: 'calico', name: 'Calico', desc: 'Lucky & charming' },
   { id: 'tuxedo', name: 'Tuxedo', desc: 'Dapper & sharp' },
@@ -27,6 +33,7 @@ const THEMES: { id: ThemePalette; name: string; colors: string[] }[] = [
   { id: 'pastel', name: 'Sweet Pastel', colors: ['#ff99c8', '#7ee8fa', '#ffd670', '#b388ff'] },
   { id: 'matcha', name: 'Matcha Nature', colors: ['#2d6a4f', '#d97706', '#0284c7', '#c2410c'] },
   { id: 'lavender', name: 'Lavender Dream', colors: ['#c084fc', '#67e8f9', '#f472b6', '#fde047'] },
+  { id: 'ocean', name: 'Ocean Breeze', colors: ['#0284c7', '#0d9488', '#06b6d4', '#ec4899'] },
   { id: 'midnight', name: 'Twilight Neon', colors: ['#00f0ff', '#ff007f', '#39ff14', '#ffb700'] },
 ];
 

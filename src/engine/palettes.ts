@@ -72,6 +72,20 @@ export const REGION_PALETTES: Record<ThemePalette, string[]> = {
     '#00ffcc', // Bright Neon Mint Turquoise
     '#3b82f6', // Electric Sky Blue
   ],
+  ocean: [
+    '#0284c7', // Ocean Blue
+    '#0d9488', // Reef Teal
+    '#f59e0b', // Sunlit Sand
+    '#10b981', // Seafoam Mint
+    '#06b6d4', // Tropical Aqua
+    '#ec4899', // Coral Reef
+    '#6366f1', // Deep Abyss
+    '#f43f5e', // Starfish Red
+    '#84cc16', // Sea Kelp
+    '#a855f7', // Sea Anemone
+    '#facc15', // Sunny Pearl
+    '#0e7490', // Pacific Cyan
+  ],
 };
 
 // Approximate, friendly human-readable color names for each territory slot in each theme
@@ -145,6 +159,20 @@ export const REGION_COLOR_NAMES: Record<ThemePalette, string[]> = {
     'Signal Red',
     'Mint Turquoise',
     'Sky Blue',
+  ],
+  ocean: [
+    'Ocean Blue',
+    'Reef Teal',
+    'Sunlit Sand',
+    'Seafoam Mint',
+    'Tropical Aqua',
+    'Coral Reef',
+    'Deep Abyss',
+    'Starfish Red',
+    'Sea Kelp',
+    'Sea Anemone',
+    'Sunny Pearl',
+    'Pacific Cyan',
   ],
 };
 

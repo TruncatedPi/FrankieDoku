@@ -172,7 +172,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           ) : (
             <>
               <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-2">
-                {catBreed === 'frankie' ? 'Paws-itively Amazing! 🐾' : 'Purr-fect! 🐾'}
+                {catBreed.startsWith('frankie') ? 'Paws-itively Amazing! 🐾' : 'Purr-fect! 🐾'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {levelNumber ? `Level ${levelNumber} Completed!` : 'Puzzle Solved!'}

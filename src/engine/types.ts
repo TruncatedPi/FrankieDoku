@@ -54,8 +54,8 @@ export interface TwoPlayerConfig {
 export type GameMode = 'campaign' | 'daily' | 'freeplay' | 'twoplayer';
 export type PlayStyle = 'classic' | 'zen'; // Classic = 3 hearts, Zen = infinite hearts
 export type InputMode = 'mark' | 'cat'; // For mobile single-tap toggling
-export type CatBreed = 'frankie' | 'orange_tabby' | 'calico' | 'tuxedo' | 'siamese' | 'black_cat' | 'gray_fluff';
-export type ThemePalette = 'cozy' | 'pastel' | 'matcha' | 'lavender' | 'midnight';
+export type CatBreed = 'frankie' | 'frankie_reimagined' | 'capybara' | 'shiba' | 'axolotl' | 'frog' | 'hamster' | 'orange_tabby' | 'calico' | 'tuxedo' | 'siamese' | 'black_cat' | 'gray_fluff';
+export type ThemePalette = 'cozy' | 'pastel' | 'matcha' | 'lavender' | 'midnight' | 'ocean';
 
 export interface UserSettings {
   soundEnabled: boolean;

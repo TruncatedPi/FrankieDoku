@@ -14,8 +14,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   autoCross: true, highlightConflicts: true, dimCompleted: true, catBreed: 'frankie', theme: 'cozy',
 };
 export const DEFAULT_STATS: GameStats = { gamesPlayed: 0, gamesWon: 0, currentDailyStreak: 0, maxDailyStreak: 0, bestTimesBySize: {} };
-const breeds = ['frankie', 'orange_tabby', 'calico', 'tuxedo', 'siamese', 'black_cat', 'gray_fluff'];
-const themes = ['cozy', 'pastel', 'matcha', 'lavender', 'midnight'];
+const breeds = ['frankie', 'frankie_reimagined', 'capybara', 'shiba', 'axolotl', 'frog', 'hamster', 'orange_tabby', 'calico', 'tuxedo', 'siamese', 'black_cat', 'gray_fluff'];
+const themes = ['cozy', 'pastel', 'matcha', 'lavender', 'midnight', 'ocean'];
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const count = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
 function read(key: string): unknown {
