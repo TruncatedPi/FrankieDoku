@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { X, Star, Lock, CheckCircle2, Trophy, Clock } from 'lucide-react';
 import { LevelProgress } from '../engine/types';
 import { CAMPAIGNS, CAMPAIGN_LEVELS, getCampaignForLevel, type CampaignLevel, type CampaignTier } from '../data/levels';
+import { getLevelDifficultyInfo } from '../engine/difficulty';
 
 interface LevelSelectModalProps {
   isOpen: boolean;
@@ -172,6 +173,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
             const prog = progressMap[lvl.id];
             const isCompleted = Boolean(prog?.completed);
             const isCurrent = lvl.id === currentLevelId;
+            const diffInfo = getLevelDifficultyInfo(lvl.id);
 
             return (
               <button
@@ -189,14 +191,25 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                     : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:border-amber-300 hover:bg-amber-50/30'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
-                    Level {lvl.levelNumber}
-                  </span>
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">
+                      Level {lvl.levelNumber}
+                    </span>
+                    {diffInfo?.isHard && (
+                      <span
+                        data-testid={`level-hard-badge-${lvl.levelNumber}`}
+                        title={`Hard for ${lvl.size}×${lvl.size} in Campaign ${diffInfo.campaignNumber} (score ${diffInfo.score} vs ${diffInfo.averageForSize.toFixed(0)} avg)`}
+                        className="shrink-0 px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-300/60 dark:border-rose-700/50 text-[9px] font-extrabold tracking-wider uppercase leading-none"
+                      >
+                        HARD
+                      </span>
+                    )}
+                  </div>
                   {isCompleted ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-100 dark:fill-emerald-950" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-100 dark:fill-emerald-950 shrink-0" />
                   ) : (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 font-mono font-medium">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 font-mono font-medium shrink-0">
                       {lvl.size}x{lvl.size}
                     </span>
                   )}

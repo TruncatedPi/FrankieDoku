@@ -14,6 +14,7 @@ import { CatBreed } from './engine/types';
 import { RotateCcw, HeartOff, Users } from 'lucide-react';
 import { CatIcon } from './components/CatIcon';
 import { FreePlayModal } from './components/FreePlayModal';
+import { getLevelDifficultyInfo } from './engine/difficulty';
 
 export function App() {
   const {
@@ -109,6 +110,7 @@ export function App() {
         playStyle={settings.playStyle}
         levelNumber={currentLevel?.levelNumber}
         levelName={currentLevel?.name}
+        isHardLevel={gameMode === 'campaign' && currentLevel ? Boolean(getLevelDifficultyInfo(currentLevel.id)?.isHard) : false}
         gridSize={currentPuzzle.size}
         hearts={hearts}
         maxHearts={maxHearts}

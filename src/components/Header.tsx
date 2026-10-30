@@ -10,6 +10,7 @@ interface HeaderProps {
   playStyle: PlayStyle;
   levelNumber?: number;
   levelName?: string;
+  isHardLevel?: boolean;
   gridSize: number;
   hearts: number;
   maxHearts: number;
@@ -75,6 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
   playStyle,
   levelNumber,
   levelName,
+  isHardLevel = false,
   gridSize,
   hearts,
   maxHearts,
@@ -254,9 +256,20 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Info Status Row: Level Title, Hearts / Zen, Timer */}
           <div className="flex items-center justify-between px-2 py-1.5 rounded-2xl bg-white/70 dark:bg-cozy-darkCard/70 backdrop-blur-sm border border-slate-200/40 dark:border-white/5 shadow-sm text-sm">
             {/* Mode & Level name */}
-            <span className="font-bold text-slate-800 dark:text-slate-100 truncate max-w-[170px]">
-              {getModeTitle()}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-bold text-slate-800 dark:text-slate-100 truncate max-w-[160px]">
+                {getModeTitle()}
+              </span>
+              {gameMode === 'campaign' && isHardLevel && (
+                <span
+                  data-testid="header-hard-badge"
+                  title="Significantly above average difficulty for this map size in the current campaign"
+                  className="shrink-0 px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300/60 dark:border-rose-700/50 text-[9px] font-extrabold tracking-wider uppercase leading-none"
+                >
+                  HARD
+                </span>
+              )}
+            </div>
 
             {/* Hearts or Zen badge */}
             <div className="flex items-center gap-1">
