@@ -224,6 +224,17 @@ function cellName(row: number, col: number): string {
   return `Row ${row + 1}, Column ${col + 1}`;
 }
 
+function shortCoord(row: number, col: number): string {
+  return `R${row + 1}C${col + 1}`;
+}
+
+function formatOrList(items: string[]): string {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} or ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')}, or ${items[items.length - 1]}`;
+}
+
 /**
  * Searches for Pointing and Claiming reductions between Lines and Territories.
  */
@@ -637,9 +648,585 @@ function findSubsetParityReduction(
 }
 
 /**
+ * Checks if a set of hypothetical cats causes an immediate unit starvation OR a shared-unit conflict.
+ * Returns a human-readable description and involved cells if so.
+ */
+function findImmediateContradictionReason(
+  size: number,
+  regions: number[][],
+  remCells: BoardCell[],
+  hypotheticalCats: Coordinate[],
+  theme: ThemePalette
+): {
+  kind: 'starved' | 'shared_unit';
+  summary: string;
+  detail: string;
+  targetUnitDesc: string;
+  involved: BoardCell[];
+} | null {
+  // 1. Starved row
+  for (let r = 0; r < size; r++) {
+    if (hypotheticalCats.some((cat) => cat.row === r)) continue;
+    const rRem = remCells.filter((c) => c.row === r);
+    if (rRem.length === 0) {
+      return {
+        kind: 'starved',
+        summary: `leaves Row ${r + 1} with no valid squares`,
+        detail: `blocks all other Row ${r + 1} possibilities`,
+        targetUnitDesc: `Row ${r + 1}`,
+        involved: [],
+      };
+    }
+  }
+  // 2. Starved column
+  for (let c = 0; c < size; c++) {
+    if (hypotheticalCats.some((cat) => cat.col === c)) continue;
+    const cRem = remCells.filter((item) => item.col === c);
+    if (cRem.length === 0) {
+      return {
+        kind: 'starved',
+        summary: `leaves Column ${c + 1} with no valid squares`,
+        detail: `blocks all other Column ${c + 1} possibilities`,
+        targetUnitDesc: `Column ${c + 1}`,
+        involved: [],
+      };
+    }
+  }
+  // 3. Starved territory
+  for (let reg = 0; reg < size; reg++) {
+    if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+    const tRem = remCells.filter((item) => regions[item.row][item.col] === reg);
+    if (tRem.length === 0) {
+      return {
+        kind: 'starved',
+        summary: `leaves ${formatTerritoryTag(reg, theme)} with no valid squares`,
+        detail: `blocks all other ${formatTerritoryTag(reg, theme)} possibilities`,
+        targetUnitDesc: formatTerritoryTag(reg, theme),
+        involved: [],
+      };
+    }
+  }
+
+  // 4. Two rows forced into same territory (Pattern a)
+  const rowsByReg = new Map<number, { row: number; cells: BoardCell[] }[]>();
+  for (let r = 0; r < size; r++) {
+    if (hypotheticalCats.some((cat) => cat.row === r)) continue;
+    const rRem = remCells.filter((c) => c.row === r);
+    const reg0 = regions[r][rRem[0].col];
+    if (rRem.every((c) => regions[r][c.col] === reg0)) {
+      const list = rowsByReg.get(reg0) || [];
+      list.push({ row: r, cells: rRem });
+      rowsByReg.set(reg0, list);
+    }
+  }
+  for (const [sharedReg, entries] of rowsByReg.entries()) {
+    if (entries.length >= 2) {
+      const [a, b] = entries;
+      const aCoords = a.cells.map((c) => shortCoord(c.row, c.col)).join(', ');
+      const bCoords = b.cells.map((c) => shortCoord(c.row, c.col)).join(', ');
+      return {
+        kind: 'shared_unit',
+        summary: `only allows for a cat in ${formatTerritoryTag(sharedReg, theme)} for both Row ${a.row + 1} (${aCoords}) and Row ${b.row + 1} (${bCoords})`,
+        detail: `forces both Row ${a.row + 1} (${aCoords}) and Row ${b.row + 1} (${bCoords}) into ${formatTerritoryTag(sharedReg, theme)}`,
+        targetUnitDesc: `Row ${a.row + 1} and Row ${b.row + 1}`,
+        involved: [...a.cells, ...b.cells],
+      };
+    }
+  }
+
+  // 5. Two columns forced into same territory
+  const colsByReg = new Map<number, { col: number; cells: BoardCell[] }[]>();
+  for (let c = 0; c < size; c++) {
+    if (hypotheticalCats.some((cat) => cat.col === c)) continue;
+    const cRem = remCells.filter((item) => item.col === c);
+    const reg0 = regions[cRem[0].row][c];
+    if (cRem.every((item) => regions[item.row][c] === reg0)) {
+      const list = colsByReg.get(reg0) || [];
+      list.push({ col: c, cells: cRem });
+      colsByReg.set(reg0, list);
+    }
+  }
+  for (const [sharedReg, entries] of colsByReg.entries()) {
+    if (entries.length >= 2) {
+      const [a, b] = entries;
+      const aCoords = a.cells.map((c) => shortCoord(c.row, c.col)).join(', ');
+      const bCoords = b.cells.map((c) => shortCoord(c.row, c.col)).join(', ');
+      return {
+        kind: 'shared_unit',
+        summary: `only allows for a cat in ${formatTerritoryTag(sharedReg, theme)} for both Column ${a.col + 1} (${aCoords}) and Column ${b.col + 1} (${bCoords})`,
+        detail: `forces both Column ${a.col + 1} (${aCoords}) and Column ${b.col + 1} (${bCoords}) into ${formatTerritoryTag(sharedReg, theme)}`,
+        targetUnitDesc: `Column ${a.col + 1} and Column ${b.col + 1}`,
+        involved: [...a.cells, ...b.cells],
+      };
+    }
+  }
+
+  // 6. Two territories forced into same row or column
+  const regsByRow = new Map<number, { reg: number; cells: BoardCell[] }[]>();
+  const regsByCol = new Map<number, { reg: number; cells: BoardCell[] }[]>();
+  for (let reg = 0; reg < size; reg++) {
+    if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+    const tRem = remCells.filter((item) => regions[item.row][item.col] === reg);
+    const r0 = tRem[0].row;
+    if (tRem.every((item) => item.row === r0)) {
+      const list = regsByRow.get(r0) || [];
+      list.push({ reg, cells: tRem });
+      regsByRow.set(r0, list);
+    }
+    const c0 = tRem[0].col;
+    if (tRem.every((item) => item.col === c0)) {
+      const list = regsByCol.get(c0) || [];
+      list.push({ reg, cells: tRem });
+      regsByCol.set(c0, list);
+    }
+  }
+  for (const [sharedRow, entries] of regsByRow.entries()) {
+    if (entries.length >= 2) {
+      const [a, b] = entries;
+      return {
+        kind: 'shared_unit',
+        summary: `only allows for a cat in Row ${sharedRow + 1} for both ${formatTerritoryTag(a.reg, theme)} and ${formatTerritoryTag(b.reg, theme)}`,
+        detail: `forces both ${formatTerritoryTag(a.reg, theme)} and ${formatTerritoryTag(b.reg, theme)} into Row ${sharedRow + 1}`,
+        targetUnitDesc: `${formatTerritoryTag(a.reg, theme)} and ${formatTerritoryTag(b.reg, theme)}`,
+        involved: [...a.cells, ...b.cells],
+      };
+    }
+  }
+  for (const [sharedCol, entries] of regsByCol.entries()) {
+    if (entries.length >= 2) {
+      const [a, b] = entries;
+      return {
+        kind: 'shared_unit',
+        summary: `only allows for a cat in Column ${sharedCol + 1} for both ${formatTerritoryTag(a.reg, theme)} and ${formatTerritoryTag(b.reg, theme)}`,
+        detail: `forces both ${formatTerritoryTag(a.reg, theme)} and ${formatTerritoryTag(b.reg, theme)} into Column ${sharedCol + 1}`,
+        targetUnitDesc: `${formatTerritoryTag(a.reg, theme)} and ${formatTerritoryTag(b.reg, theme)}`,
+        involved: [...a.cells, ...b.cells],
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Evaluates why placing a cat at a specific empty cell causes a logical contradiction.
+ * Returns a scored HintResult (lower score = simpler, more direct deduction).
+ */
+function evaluateCellContradiction(
+  size: number,
+  regions: number[][],
+  cells: BoardCell[],
+  validEmpty: BoardCell[],
+  placedCats: Coordinate[],
+  cell: BoardCell,
+  theme: ThemePalette = 'cozy'
+): { score: number; hint: HintResult } | null {
+  const hypotheticalCats = [...placedCats, { row: cell.row, col: cell.col }];
+  const cellReg = regions[cell.row][cell.col];
+  const sc = shortCoord(cell.row, cell.col);
+
+  // Tier 1 (score 10): 1-Step Direct Unit Starvation (Row, Column, or Territory has 0 valid spots left)
+  for (let r = 0; r < size; r++) {
+    if (hypotheticalCats.some((cat) => cat.row === r)) continue;
+    const remaining = validEmpty.filter((c) => c.row === r && isValidPlacement(c.row, c.col, hypotheticalCats, regions));
+    if (remaining.length === 0) {
+      const wiped = validEmpty.filter(
+        (c) => c.row === r && !isValidPlacement(c.row, c.col, [{ row: cell.row, col: cell.col }], regions)
+      );
+      return {
+        score: 10,
+        hint: {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} (${sc}) eliminates all valid spots in Row ${r + 1}! Mark this square with an ❌.`,
+          steps: [
+            `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}).`,
+            `That cat eliminates all remaining open spots in Row ${r + 1} (${wiped.map((w) => shortCoord(w.row, w.col)).join(', ')}).`,
+            `Every row must contain exactly one cat, so leaving Row ${r + 1} with 0 valid squares is impossible.`,
+            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot contain a cat. Mark it with an ❌!`,
+          ],
+          involvedCells: [
+            { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+          ],
+        },
+      };
+    }
+  }
+
+  for (let c = 0; c < size; c++) {
+    if (hypotheticalCats.some((cat) => cat.col === c)) continue;
+    const remaining = validEmpty.filter((item) => item.col === c && isValidPlacement(item.row, item.col, hypotheticalCats, regions));
+    if (remaining.length === 0) {
+      const wiped = validEmpty.filter(
+        (item) => item.col === c && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
+      );
+      return {
+        score: 10,
+        hint: {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} (${sc}) eliminates all valid spots in Column ${c + 1}! Mark this square with an ❌.`,
+          steps: [
+            `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}).`,
+            `That cat eliminates all remaining open spots in Column ${c + 1} (${wiped.map((w) => shortCoord(w.row, w.col)).join(', ')}).`,
+            `Every column must contain exactly one cat, so leaving Column ${c + 1} with 0 valid squares is impossible.`,
+            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot contain a cat. Mark it with an ❌!`,
+          ],
+          involvedCells: [
+            { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+          ],
+        },
+      };
+    }
+  }
+
+  for (let reg = 0; reg < size; reg++) {
+    if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+    const remaining = validEmpty.filter(
+      (item) => regions[item.row][item.col] === reg && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
+    );
+    if (remaining.length === 0) {
+      const wiped = validEmpty.filter(
+        (item) => regions[item.row][item.col] === reg && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
+      );
+      return {
+        score: 10,
+        hint: {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} (${sc}) eliminates all valid spots in ${formatTerritoryTag(reg, theme)}! Mark this square with an ❌.`,
+          steps: [
+            `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}).`,
+            `That cat eliminates all remaining open spots in ${formatTerritoryTag(reg, theme)}.`,
+            `Every territory must contain exactly one cat, so leaving ${formatTerritoryTag(reg, theme)} with 0 valid squares is impossible.`,
+            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot contain a cat. Mark it with an ❌!`,
+          ],
+          involvedCells: [
+            { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
+          ],
+        },
+      };
+    }
+  }
+
+  const remAfterCell = validEmpty.filter((c) => isValidPlacement(c.row, c.col, hypotheticalCats, regions));
+
+  // Tier 2 (score 20): 1-Step Shared-Unit Conflict (Pattern a: e.g. placing a cat on R2C2 only allows a cat in Blue territory for both Row 1 and Row 3)
+  const immShared = findImmediateContradictionReason(size, regions, remAfterCell, hypotheticalCats, theme);
+  if (immShared) {
+    return {
+      score: 20,
+      hint: {
+        type: 'elimination',
+        row: cell.row,
+        col: cell.col,
+        explanation: `Placing a cat on ${sc} (${cellName(cell.row, cell.col)}) of ${formatTerritoryTag(cellReg, theme)} ${immShared.summary}. So ${sc} cannot be a cat — mark with an ❌!`,
+        steps: [
+          `Suppose a cat is placed on ${sc} (${cellName(cell.row, cell.col)}) of ${formatTerritoryTag(cellReg, theme)}.`,
+          `This ${immShared.summary}.`,
+          `Because a single unit can only contain one cat, ${immShared.targetUnitDesc} cannot both be satisfied.`,
+          `Conclusion: ${sc} (${cellName(cell.row, cell.col)}) cannot be a cat — mark it with an ❌!`,
+        ],
+        involvedCells: [
+          { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+          ...immShared.involved.map((inv) => ({ row: inv.row, col: inv.col, highlight: true, reason: 'caused_by' as const })),
+        ],
+      },
+    };
+  }
+
+  // Tier 3 (score 30): 1-Step Forced Single in any Territory, Row, or Column that causes an immediate contradiction
+  const singleUnits: { unitDesc: string; forced: BoardCell }[] = [];
+  for (let reg = 0; reg < size; reg++) {
+    if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+    const cand = remAfterCell.filter((item) => regions[item.row][item.col] === reg);
+    if (cand.length === 1) singleUnits.push({ unitDesc: formatTerritoryTag(reg, theme), forced: cand[0] });
+  }
+  for (let r = 0; r < size; r++) {
+    if (hypotheticalCats.some((cat) => cat.row === r)) continue;
+    const cand = remAfterCell.filter((item) => item.row === r);
+    if (cand.length === 1) singleUnits.push({ unitDesc: `Row ${r + 1}`, forced: cand[0] });
+  }
+  for (let c = 0; c < size; c++) {
+    if (hypotheticalCats.some((cat) => cat.col === c)) continue;
+    const cand = remAfterCell.filter((item) => item.col === c);
+    if (cand.length === 1) singleUnits.push({ unitDesc: `Column ${c + 1}`, forced: cand[0] });
+  }
+
+  for (const { unitDesc, forced } of singleUnits) {
+    const nextCats = [...hypotheticalCats, { row: forced.row, col: forced.col }];
+    const nextRem = remAfterCell.filter((item) => isValidPlacement(item.row, item.col, nextCats, regions));
+    const imm = findImmediateContradictionReason(size, regions, nextRem, nextCats, theme);
+    if (imm) {
+      const fsc = shortCoord(forced.row, forced.col);
+      return {
+        score: 30,
+        hint: {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat on ${sc} (${cellName(cell.row, cell.col)}) of ${formatTerritoryTag(cellReg, theme)} only allows ${fsc} in ${unitDesc}, which ${imm.summary}! Mark ${sc} with an ❌.`,
+          steps: [
+            `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}) in ${formatTerritoryTag(cellReg, theme)}.`,
+            `In ${unitDesc}, this leaves only ${cellName(forced.row, forced.col)} (${fsc}) open, forcing a cat there.`,
+            `Placing that forced cat ${imm.summary}!`,
+            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot be a cat — mark it with an ❌!`,
+          ],
+          involvedCells: [
+            { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+            { row: forced.row, col: forced.col, highlight: true, reason: 'caused_by' },
+            ...imm.involved.map((inv) => ({ row: inv.row, col: inv.col, highlight: true, reason: 'caused_by' as const })),
+          ],
+        },
+      };
+    }
+  }
+
+  // Tier 4 (score 40): Multi-Option Branching in a Territory, Row, or Column (Pattern b: e.g. placing a cat on R1C7, R1C8, or R1C9 in Blue only allows Coral Red in Row 2 or Row 3, and both options block all other Row 3 or Row 2 possibilities)
+  const branchUnits: { unitDesc: string; options: BoardCell[] }[] = [];
+  for (let reg = 0; reg < size; reg++) {
+    if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+    const cand = remAfterCell.filter((item) => regions[item.row][item.col] === reg);
+    if (cand.length >= 2 && cand.length <= 3) branchUnits.push({ unitDesc: formatTerritoryTag(reg, theme), options: cand });
+  }
+  for (let r = 0; r < size; r++) {
+    if (hypotheticalCats.some((cat) => cat.row === r)) continue;
+    const cand = remAfterCell.filter((item) => item.row === r);
+    if (cand.length >= 2 && cand.length <= 3) branchUnits.push({ unitDesc: `Row ${r + 1}`, options: cand });
+  }
+  for (let c = 0; c < size; c++) {
+    if (hypotheticalCats.some((cat) => cat.col === c)) continue;
+    const cand = remAfterCell.filter((item) => item.col === c);
+    if (cand.length >= 2 && cand.length <= 3) branchUnits.push({ unitDesc: `Column ${c + 1}`, options: cand });
+  }
+
+  for (const { unitDesc, options } of branchUnits) {
+    const optionSteps: string[] = [];
+    const targetUnits: string[] = [];
+    const extraInvolved: BoardCell[] = [];
+    let allFail = true;
+
+    for (const opt of options) {
+      const nextCats = [...hypotheticalCats, { row: opt.row, col: opt.col }];
+      const nextRem = remAfterCell.filter((item) => isValidPlacement(item.row, item.col, nextCats, regions));
+      const imm = findImmediateContradictionReason(size, regions, nextRem, nextCats, theme);
+      if (!imm) {
+        allFail = false;
+        break;
+      }
+      optionSteps.push(`Placing a cat at ${shortCoord(opt.row, opt.col)} (Row ${opt.row + 1}, Column ${opt.col + 1}) ${imm.detail}.`);
+      if (!targetUnits.includes(imm.targetUnitDesc)) {
+        targetUnits.push(imm.targetUnitDesc);
+      }
+      extraInvolved.push(...imm.involved);
+    }
+
+    if (allFail) {
+      // Check if sibling empty cells in the same row + territory share this exact deduction
+      const siblings = validEmpty.filter(
+        (s) => s.row === cell.row && regions[s.row][s.col] === cellReg
+      );
+      const groupCoords =
+        siblings.length > 1
+          ? `either ${formatOrList(siblings.map((s) => shortCoord(s.row, s.col)))}`
+          : `${sc} (${cellName(cell.row, cell.col)})`;
+      const optDesc = formatOrList(
+        options.map((o) => `Row ${o.row + 1} (${shortCoord(o.row, o.col)})`)
+      );
+      const bothOrAll = options.length === 2 ? 'Both options' : 'All options';
+      const blockedTargets = formatOrList(targetUnits);
+
+      return {
+        score: 40 + options.length,
+        hint: {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat on ${groupCoords} in ${formatTerritoryTag(cellReg, theme)} only allows for a cat in ${unitDesc} for either ${optDesc}. ${bothOrAll} block all other ${blockedTargets} possibilities! Mark ${sc} with an ❌.`,
+          steps: [
+            `Suppose a cat is placed on ${groupCoords} in ${formatTerritoryTag(cellReg, theme)}.`,
+            `This only allows for a cat in ${unitDesc} for either ${optDesc}.`,
+            ...optionSteps,
+            `Conclusion: ${sc} (${cellName(cell.row, cell.col)}) cannot be a cat — mark it with an ❌!`,
+          ],
+          involvedCells: [
+            ...siblings.map((s) => ({
+              row: s.row,
+              col: s.col,
+              fadedState: 'mark' as const,
+              highlight: true,
+              reason: 'forced_empty' as const,
+            })),
+            ...options.map((o) => ({
+              row: o.row,
+              col: o.col,
+              highlight: true,
+              reason: 'caused_by' as const,
+            })),
+            ...extraInvolved.map((inv) => ({
+              row: inv.row,
+              col: inv.col,
+              highlight: true,
+              reason: 'caused_by' as const,
+            })),
+          ],
+        },
+      };
+    }
+  }
+
+  // Tier 5 (score 50 + depth): Iterative Propagation Chain (multi-step forced moves + branching)
+  const cats: Coordinate[] = [...hypotheticalCats];
+  const chainSteps: string[] = [];
+  const chainInvolved: HintInvolvedCell[] = [
+    { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
+  ];
+
+  for (let depth = 0; depth < size; depth++) {
+    const rem = validEmpty.filter((c) => isValidPlacement(c.row, c.col, cats, regions));
+    const immediate = findImmediateContradictionReason(size, regions, rem, cats, theme);
+    if (immediate) {
+      for (const inv of immediate.involved) {
+        if (!chainInvolved.some((x) => x.row === inv.row && x.col === inv.col)) {
+          chainInvolved.push({ row: inv.row, col: inv.col, highlight: true, reason: 'caused_by' });
+        }
+      }
+      return {
+        score: 50 + chainSteps.length,
+        hint: {
+          type: 'elimination',
+          row: cell.row,
+          col: cell.col,
+          explanation: `Placing a cat on ${sc} (${cellName(cell.row, cell.col)}) of ${formatTerritoryTag(cellReg, theme)} forces a chain of placements that ${immediate.summary}. Mark ${sc} with an ❌!`,
+          steps: [
+            `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}) of ${formatTerritoryTag(cellReg, theme)}.`,
+            ...chainSteps,
+            `This ${immediate.summary}, which is impossible.`,
+            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot be a cat — mark it with an ❌!`,
+          ],
+          involvedCells: chainInvolved,
+        },
+      };
+    }
+
+    // Find next forced single in any territory, row, or column
+    let forced: { cell: BoardCell; unitDesc: string } | null = null;
+    for (let reg = 0; reg < size; reg++) {
+      if (cats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+      const tRem = rem.filter((c) => regions[c.row][c.col] === reg);
+      if (tRem.length === 1) {
+        forced = { cell: tRem[0], unitDesc: formatTerritoryTag(reg, theme) };
+        break;
+      }
+    }
+    if (!forced) {
+      for (let r = 0; r < size; r++) {
+        if (cats.some((cat) => cat.row === r)) continue;
+        const rRem = rem.filter((c) => c.row === r);
+        if (rRem.length === 1) {
+          forced = { cell: rRem[0], unitDesc: `Row ${r + 1}` };
+          break;
+        }
+      }
+    }
+    if (!forced) {
+      for (let c = 0; c < size; c++) {
+        if (cats.some((cat) => cat.col === c)) continue;
+        const cRem = rem.filter((item) => item.col === c);
+        if (cRem.length === 1) {
+          forced = { cell: cRem[0], unitDesc: `Column ${c + 1}` };
+          break;
+        }
+      }
+    }
+
+    if (forced) {
+      cats.push({ row: forced.cell.row, col: forced.cell.col });
+      chainSteps.push(`In ${forced.unitDesc}, this leaves only ${shortCoord(forced.cell.row, forced.cell.col)} open, forcing a cat there.`);
+      chainInvolved.push({ row: forced.cell.row, col: forced.cell.col, highlight: true, reason: 'caused_by' });
+      continue;
+    }
+
+    // Check 2-3 option branching after the chain
+    for (let reg = 0; reg < size; reg++) {
+      if (cats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
+      const tRem = rem.filter((c) => regions[c.row][c.col] === reg);
+      if (tRem.length >= 2 && tRem.length <= 3) {
+        const optionReasons: string[] = [];
+        const targetUnits: string[] = [];
+        let allFail = true;
+        for (const opt of tRem) {
+          const nextCats = [...cats, { row: opt.row, col: opt.col }];
+          const nextRem = rem.filter((c) => isValidPlacement(c.row, c.col, nextCats, regions));
+          const imm = findImmediateContradictionReason(size, regions, nextRem, nextCats, theme);
+          if (!imm) {
+            allFail = false;
+            break;
+          }
+          optionReasons.push(`Placing a cat at ${shortCoord(opt.row, opt.col)} (Row ${opt.row + 1}) ${imm.detail}.`);
+          if (!targetUnits.includes(imm.targetUnitDesc)) targetUnits.push(imm.targetUnitDesc);
+        }
+        if (allFail) {
+          const optCoords = formatOrList(tRem.map((c) => `Row ${c.row + 1} (${shortCoord(c.row, c.col)})`));
+          for (const opt of tRem) {
+            chainInvolved.push({ row: opt.row, col: opt.col, highlight: true, reason: 'caused_by' });
+          }
+          return {
+            score: 60 + chainSteps.length + tRem.length,
+            hint: {
+              type: 'elimination',
+              row: cell.row,
+              col: cell.col,
+              explanation: `Placing a cat on ${sc} in ${formatTerritoryTag(cellReg, theme)} only allows for a cat in ${formatTerritoryTag(reg, theme)} for either ${optCoords}, and both options block all other ${formatOrList(targetUnits)} possibilities! Mark ${sc} with an ❌.`,
+              steps: [
+                `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}) in ${formatTerritoryTag(cellReg, theme)}.`,
+                ...chainSteps,
+                `This only allows for a cat in ${formatTerritoryTag(reg, theme)} for either ${optCoords}.`,
+                ...optionReasons,
+                `Conclusion: ${sc} cannot contain a cat — mark it with an ❌!`,
+              ],
+              involvedCells: chainInvolved,
+            },
+          };
+        }
+      }
+    }
+
+    break;
+  }
+
+  return null;
+}
+
+/**
+ * Public helper to explain why a specific non-solution cell cannot contain a cat.
+ */
+export function explainCellContradiction(
+  puzzle: Puzzle,
+  cells: BoardCell[],
+  row: number,
+  col: number,
+  theme: ThemePalette = 'cozy'
+): HintResult | null {
+  const placedCats = cells.filter((c) => c.state === 'cat');
+  const validEmpty = cells.filter((c) => c.state === 'empty' && isValidPlacement(c.row, c.col, placedCats, puzzle.regions));
+  const target = validEmpty.find((c) => c.row === row && c.col === col);
+  if (!target) return null;
+  const res = evaluateCellContradiction(puzzle.size, puzzle.regions, cells, validEmpty, placedCats, target, theme);
+  return res ? res.hint : null;
+}
+
+/**
  * Lookahead contradiction deduction:
  * Tests placing a hypothetical cat at each non-solution empty cell.
- * Searches for 1-step unit starvation and multi-step forcing chains.
+ * Selects the simplest, most direct logical contradiction (1-step starvation,
+ * 1-step shared-unit conflict, 1-step forced single, 2-option branching, or short propagation chain).
  */
 function findLookaheadContradiction(
   size: number,
@@ -649,196 +1236,19 @@ function findLookaheadContradiction(
   solutionSet: Set<string>,
   theme: ThemePalette = 'cozy'
 ): HintResult | null {
-  const emptyNonSol = cells.filter((c) => c.state === 'empty' && !solutionSet.has(`${c.row},${c.col}`));
+  const validEmpty = cells.filter((c) => c.state === 'empty' && isValidPlacement(c.row, c.col, placedCats, regions));
+  const emptyNonSol = validEmpty.filter((c) => !solutionSet.has(`${c.row},${c.col}`));
 
-  // 1. 1-Step Lookahead Contradiction: Check if placing a cat at (cell.row, cell.col) directly starves any unit
+  let best: { score: number; hint: HintResult } | null = null;
   for (const cell of emptyNonSol) {
-    const hypotheticalCats = [...placedCats, { row: cell.row, col: cell.col }];
-
-    // Check Row starvation
-    for (let r = 0; r < size; r++) {
-      if (hypotheticalCats.some((cat) => cat.row === r)) continue;
-      const remaining = cells.filter(
-        (c) => c.row === r && c.state !== 'mark' && isValidPlacement(c.row, c.col, hypotheticalCats, regions)
-      );
-      if (remaining.length === 0) {
-        const wiped = cells.filter(
-          (c) => c.row === r && c.state === 'empty' && !isValidPlacement(c.row, c.col, [{ row: cell.row, col: cell.col }], regions)
-        );
-        return {
-          type: 'elimination',
-          row: cell.row,
-          col: cell.col,
-          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} eliminates all valid spots in Row ${r + 1}! Mark this square with an ❌.`,
-          steps: [
-            `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-            `That cat eliminates all remaining open spots in Row ${r + 1} (${wiped.map((w) => `Column ${w.col + 1}`).join(', ')}).`,
-            `Every row must contain exactly one cat, so leaving Row ${r + 1} with 0 valid squares is impossible.`,
-            `Conclusion: ${cellName(cell.row, cell.col)} cannot contain a cat. Mark it with an ❌!`,
-          ],
-          involvedCells: [
-            { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
-          ],
-        };
-      }
-    }
-
-    // Check Column starvation
-    for (let c = 0; c < size; c++) {
-      if (hypotheticalCats.some((cat) => cat.col === c)) continue;
-      const remaining = cells.filter(
-        (item) => item.col === c && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
-      );
-      if (remaining.length === 0) {
-        const wiped = cells.filter(
-          (item) => item.col === c && item.state === 'empty' && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
-        );
-        return {
-          type: 'elimination',
-          row: cell.row,
-          col: cell.col,
-          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} eliminates all valid spots in Column ${c + 1}! Mark this square with an ❌.`,
-          steps: [
-            `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-            `That cat eliminates all remaining open spots in Column ${c + 1} (${wiped.map((w) => `Row ${w.row + 1}`).join(', ')}).`,
-            `Every column must contain exactly one cat, so leaving Column ${c + 1} with 0 valid squares is impossible.`,
-            `Conclusion: ${cellName(cell.row, cell.col)} cannot contain a cat. Mark it with an ❌!`,
-          ],
-          involvedCells: [
-            { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
-          ],
-        };
-      }
-    }
-
-    // Check Territory starvation
-    for (let reg = 0; reg < size; reg++) {
-      if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
-      const remaining = cells.filter(
-        (item) => regions[item.row][item.col] === reg && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
-      );
-      if (remaining.length === 0) {
-        const wiped = cells.filter(
-          (item) => regions[item.row][item.col] === reg && item.state === 'empty' && !isValidPlacement(item.row, item.col, [{ row: cell.row, col: cell.col }], regions)
-        );
-        return {
-          type: 'elimination',
-          row: cell.row,
-          col: cell.col,
-          explanation: `Placing a cat at ${cellName(cell.row, cell.col)} eliminates all valid spots in ${formatTerritoryTag(reg, theme)}! Mark this square with an ❌.`,
-          steps: [
-            `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-            `That cat eliminates all remaining open spots in ${formatTerritoryTag(reg, theme)}.`,
-            `Every territory must contain exactly one cat, so leaving ${formatTerritoryTag(reg, theme)} with 0 valid squares is impossible.`,
-            `Conclusion: ${cellName(cell.row, cell.col)} cannot contain a cat. Mark it with an ❌!`,
-          ],
-          involvedCells: [
-            { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-            ...wiped.map((w) => ({ row: w.row, col: w.col, fadedState: 'mark' as const, highlight: true, reason: 'starved_unit' as const })),
-          ],
-        };
-      }
+    const evaluated = evaluateCellContradiction(size, regions, cells, validEmpty, placedCats, cell, theme);
+    if (evaluated && (!best || evaluated.score < best.score)) {
+      best = evaluated;
+      if (best.score === 10) break; // Fastest possible 1-step direct starvation
     }
   }
 
-  // 2. Multi-Step Forcing Chains (Propagation):
-  // Check if placing a cat at (cell.row, cell.col) forces a single square in another unit, leading to contradiction
-  for (const cell of emptyNonSol) {
-    const hypotheticalCats = [...placedCats, { row: cell.row, col: cell.col }];
-
-    for (let reg = 0; reg < size; reg++) {
-      if (hypotheticalCats.some((cat) => regions[cat.row][cat.col] === reg)) continue;
-      const cand = cells.filter(
-        (item) => regions[item.row][item.col] === reg && item.state !== 'mark' && isValidPlacement(item.row, item.col, hypotheticalCats, regions)
-      );
-      if (cand.length === 1) {
-        const forced = cand[0];
-        const nextCats = [...hypotheticalCats, { row: forced.row, col: forced.col }];
-
-        // Check if nextCats starves any territory
-        for (let targetReg = 0; targetReg < size; targetReg++) {
-          if (nextCats.some((cat) => regions[cat.row][cat.col] === targetReg)) continue;
-          const rem = cells.filter(
-            (item) => regions[item.row][item.col] === targetReg && item.state !== 'mark' && isValidPlacement(item.row, item.col, nextCats, regions)
-          );
-          if (rem.length === 0) {
-            return {
-              type: 'elimination',
-              row: cell.row,
-              col: cell.col,
-              explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves ${formatTerritoryTag(targetReg, theme)}! Mark this square with an ❌.`,
-              steps: [
-                `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-                `In ${formatTerritoryTag(reg, theme)}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
-                `Placing that forced cat eliminates all remaining open spots in ${formatTerritoryTag(targetReg, theme)}!`,
-                `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
-              ],
-              involvedCells: [
-                { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-                { row: forced.row, col: forced.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
-              ],
-            };
-          }
-        }
-
-        // Check if nextCats starves any row
-        for (let r = 0; r < size; r++) {
-          if (nextCats.some((cat) => cat.row === r)) continue;
-          const rem = cells.filter(
-            (item) => item.row === r && item.state !== 'mark' && isValidPlacement(item.row, item.col, nextCats, regions)
-          );
-          if (rem.length === 0) {
-            return {
-              type: 'elimination',
-              row: cell.row,
-              col: cell.col,
-              explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves Row ${r + 1}! Mark this square with an ❌.`,
-              steps: [
-                `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-                `In ${formatTerritoryTag(reg, theme)}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
-                `Placing that forced cat eliminates all remaining open spots in Row ${r + 1}!`,
-                `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
-              ],
-              involvedCells: [
-                { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-                { row: forced.row, col: forced.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
-              ],
-            };
-          }
-        }
-
-        // Check if nextCats starves any column
-        for (let c = 0; c < size; c++) {
-          if (nextCats.some((cat) => cat.col === c)) continue;
-          const rem = cells.filter(
-            (item) => item.col === c && item.state !== 'mark' && isValidPlacement(item.row, item.col, nextCats, regions)
-          );
-          if (rem.length === 0) {
-            return {
-              type: 'elimination',
-              row: cell.row,
-              col: cell.col,
-              explanation: `Placing a cat at ${cellName(cell.row, cell.col)} forces a cat at ${cellName(forced.row, forced.col)}, which starves Column ${c + 1}! Mark this square with an ❌.`,
-              steps: [
-                `Suppose a cat is placed at ${cellName(cell.row, cell.col)}.`,
-                `In ${formatTerritoryTag(reg, theme)}, this leaves only ${cellName(forced.row, forced.col)} open, forcing a cat there.`,
-                `Placing that forced cat eliminates all remaining open spots in Column ${c + 1}!`,
-                `Conclusion: Placing a cat at ${cellName(cell.row, cell.col)} causes an impossible contradiction. Mark it with an ❌!`,
-              ],
-              involvedCells: [
-                { row: cell.row, col: cell.col, fadedState: 'cat', highlight: true, reason: 'conflict' },
-                { row: forced.row, col: forced.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
-              ],
-            };
-          }
-        }
-      }
-    }
-  }
-
-  return null;
+  return best ? best.hint : null;
 }
 
 /**
@@ -1165,32 +1575,7 @@ export function generateHint(
     return lookaheadHint;
   }
 
-  // 10. Place an unplaced cat from solution with clear deduction explanation
-  for (const sol of solution) {
-    const cell = cells.find((c) => c.row === sol.row && c.col === sol.col);
-    if (cell && cell.state === 'empty') {
-      const rowHasCat = cells.some((c) => c.row === sol.row && c.state === 'cat');
-      const colHasCat = cells.some((c) => c.col === sol.col && c.state === 'cat');
-      const regHasCat = cells.some((c) => regions[c.row][c.col] === regions[sol.row][sol.col] && c.state === 'cat');
-      if (!rowHasCat && !colHasCat && !regHasCat) {
-        const reg = regions[sol.row][sol.col];
-        return {
-          type: 'placement',
-          row: sol.row,
-          col: sol.col,
-          explanation: `A happy cat belongs right here in ${cellName(sol.row, sol.col)}! 🐱`,
-          steps: [
-            `Examine ${cellName(sol.row, sol.col)} inside ${formatTerritoryTag(reg, theme)}.`,
-            `Placing a cat here maintains the unique, valid solution across all rows, columns, and territories.`,
-            `Conclusion: Place a cat at ${cellName(sol.row, sol.col)}!`,
-          ],
-          involvedCells: [
-            { row: sol.row, col: sol.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
-          ],
-        };
-      }
-    }
-  }
+  // Never emit an un-deduced placement spoiler; all hints are deduced via steps 1–9.
 
   return null;
 }

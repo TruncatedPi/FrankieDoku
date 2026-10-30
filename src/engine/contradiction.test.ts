@@ -5,6 +5,7 @@ import {
   isPuzzleUnique,
   findConflicts,
   generateHint,
+  explainCellContradiction,
   validatePuzzleIntegrity,
 } from './solver';
 import { generateDailyPuzzle, generatePuzzle } from './generator';
@@ -424,6 +425,100 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
       hint.steps.some((s) => s.includes('consume all 6 cats') || s.includes('can contain at most 6 cats')),
       'Steps must explain the pigeonhole counting principle'
     );
+  });
+
+  test('Level 364 mid-game position: avoids oracle cat-placement giveaway and explains (a) R2C2 shared-territory conflict and (b) R1C7-R1C9 two-option Coral Red contradiction', () => {
+    const level364 = CAMPAIGN_LEVELS.find((l) => l.id === 'level-364');
+    assert.ok(level364, 'Level 364 must exist');
+
+    // Exact 25 marks from the mid-game screenshot position on Level 364:
+    const marks = new Set([
+      '0,3', '0,4', '0,5',
+      '1,0', '1,3', '1,4', '1,5', '1,6', '1,7',
+      '2,3', '2,4', '2,5', '2,6',
+      '3,3', '3,4', '3,6', '3,7',
+      '5,6',
+      '6,6',
+      '8,0', '8,1', '8,3', '8,4', '8,5', '8,6',
+    ]);
+
+    const cells: BoardCell[] = [];
+    for (let r = 0; r < level364.size; r++) {
+      for (let c = 0; c < level364.size; c++) {
+        cells.push({
+          row: r,
+          col: c,
+          region: level364.regions[r][c],
+          state: marks.has(`${r},${c}`) ? 'mark' : 'empty',
+          hasConflict: false,
+          isHinted: false,
+        });
+      }
+    }
+
+    // 1. Primary hint on this board state must be Deduction (a):
+    // Placing a cat on R2C2 of Territory Coral Red only allows for a cat in Territory Sky Cerulean for both Row 1 (R1C7, R1C8, R1C9) and Row 3 (R3C8, R3C9)
+    const hintA = generateHint(level364, cells, 'cozy');
+    assert.ok(hintA, 'Hint must be generated for Level 364 mid-game position');
+    assert.strictEqual(hintA.type, 'elimination', 'Hint must be an elimination (mark with X), never an un-deduced cat placement giveaway');
+    assert.ok(!hintA.explanation.includes('maintains the unique, valid solution'), 'Must never emit oracle solution giveaway text');
+    assert.strictEqual(hintA.row, 1, 'Hint (a) targets Row 2 (0-indexed 1)');
+    assert.strictEqual(hintA.col, 1, 'Hint (a) targets Column 2 (0-indexed 1)');
+
+    const plainA = stripTerritoryTags(hintA.explanation);
+    assert.ok(plainA.includes('R2C2'), `Hint (a) must reference R2C2, got: ${plainA}`);
+    assert.ok(plainA.includes('Territory Coral Red'), `Hint (a) must reference Territory Coral Red, got: ${plainA}`);
+    assert.ok(plainA.includes('Territory Sky Cerulean'), `Hint (a) must reference Territory Sky Cerulean, got: ${plainA}`);
+    assert.ok(
+      plainA.includes('Row 1 (R1C7, R1C8, R1C9)') && plainA.includes('Row 3 (R3C8, R3C9)'),
+      `Hint (a) must explain that both Row 1 (R1C7, R1C8, R1C9) and Row 3 (R3C8, R3C9) only have options in Sky Cerulean, got: ${plainA}`
+    );
+
+    // 2. Deduction (b): Placing a cat on either R1C7, R1C8, or R1C9 in Territory Sky Cerulean only allows for a cat
+    // in Territory Coral Red for either Row 2 (R2C2) or Row 3 (R3C2), and both options block all other Row 3 or Row 2 possibilities
+    const hintB = explainCellContradiction(level364, cells, 0, 6, 'cozy');
+    assert.ok(hintB, 'Contradiction explanation must be generated for R1C7');
+    assert.strictEqual(hintB.type, 'elimination');
+    const plainB = stripTerritoryTags(hintB.explanation);
+    assert.ok(
+      plainB.includes('either R1C7, R1C8, or R1C9'),
+      `Hint (b) must group R1C7, R1C8, or R1C9 in Sky Cerulean, got: ${plainB}`
+    );
+    assert.ok(
+      plainB.includes('Territory Coral Red') && plainB.includes('Row 2 (R2C2) or Row 3 (R3C2)'),
+      `Hint (b) must explain that Coral Red is restricted to Row 2 (R2C2) or Row 3 (R3C2), got: ${plainB}`
+    );
+    assert.ok(
+      plainB.includes('Both options block all other Row 3 or Row 2 possibilities'),
+      `Hint (b) must explain that both options block all other Row 3 or Row 2 possibilities, got: ${plainB}`
+    );
+
+    // 3. Verify that solving Level 364 from start to finish via generateHint completes cleanly with ZERO oracle placements
+    const simCells: BoardCell[] = [];
+    for (let r = 0; r < level364.size; r++) {
+      for (let c = 0; c < level364.size; c++) {
+        simCells.push({
+          row: r,
+          col: c,
+          region: level364.regions[r][c],
+          state: 'empty',
+          hasConflict: false,
+          isHinted: false,
+        });
+      }
+    }
+    for (let step = 0; step < 200; step++) {
+      if (simCells.filter((c) => c.state === 'cat').length === level364.size) break;
+      const h = generateHint(level364, simCells, 'cozy');
+      assert.ok(h, `Step ${step} on Level 364 must produce a logical hint`);
+      assert.ok(
+        !h.explanation.includes('maintains the unique, valid solution'),
+        `Step ${step} must not use oracle giveaway fallback`
+      );
+      const cell = simCells.find((c) => c.row === h.row && c.col === h.col)!;
+      cell.state = h.type === 'placement' ? 'cat' : 'mark';
+    }
+    assert.strictEqual(simCells.filter((c) => c.state === 'cat').length, level364.size, 'Level 364 must solve to completion via hints');
   });
 });
 
