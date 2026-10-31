@@ -64,10 +64,20 @@ function connected(grid: number[][], size: number, region: number): boolean {
  * that background connected. Only accept growth preserving connectivity and
  * uniqueness, so exhausted growth budgets still return a valid map.
  */
-export function generatePuzzle(size: number, seed?: number, maxRounds = 60): Puzzle {
+export function countDisjointRegions(grid: number[][], size: number): number {
+  let count = 0;
+  for (let reg = 0; reg < size; reg++) {
+    if (!connected(grid, size, reg)) count++;
+  }
+  return count;
+}
+export function generatePuzzle(size: number, seed?: number, maxRounds = 60, disjointCount = 0): Puzzle {
   assertBoardSize(size);
   if (seed !== undefined && !Number.isSafeInteger(seed)) throw new RangeError('Seed must be a safe integer');
   if (!Number.isInteger(maxRounds) || maxRounds < 0 || maxRounds > 1000) throw new RangeError('Invalid growth budget');
+  if (!Number.isInteger(disjointCount) || disjointCount < 0 || disjointCount >= size) {
+    throw new RangeError(`Disjoint territory count must be an integer from 0 to ${size - 1}`);
+  }
   const actualSeed = seed ?? Math.floor(Math.random() * 0x100000000);
   const random = createPRNG(actualSeed), queens = generateValidQueens(size, random);
   const background = Math.floor(random() * size);
@@ -98,9 +108,94 @@ export function generatePuzzle(size: number, seed?: number, maxRounds = 60): Puz
     }
     if (!changed) break;
   }
+  if (disjointCount > 0) {
+    return generateDisjointPuzzle(size, actualSeed, maxRounds, disjointCount);
+  }
   const integrity = validatePuzzleIntegrity(puzzle);
   if (!integrity.valid) throw new Error(`Generated map failed integrity: ${integrity.error}`);
   return puzzle;
+}
+function generateDisjointPuzzle(size: number, baseSeed: number, maxRounds: number, disjointCount: number): Puzzle {
+  const isOrthoAdj = (grid: number[][], r: number, c: number, reg: number, ignoreKey = -1) => {
+    for (const [dr, dc] of directions) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nc >= 0 && nr < size && nc < size && nr * size + nc !== ignoreKey && grid[nr][nc] === reg) return true;
+    }
+    return false;
+  };
+  for (let attempt = 0; attempt < 250; attempt++) {
+    const random = createPRNG((baseSeed + attempt * 0x9e3779b9) >>> 0);
+    const queens = generateValidQueens(size, random);
+    const background = Math.floor(random() * size);
+    const grid = Array.from({ length: size }, () => new Array<number>(size).fill(background));
+    const seeds = new Set(queens.map(q => q.row * size + q.col));
+    queens.forEach((q, region) => { grid[q.row][q.col] = region; });
+    const puzzle: Puzzle = {
+      id: `gen-v${GENERATOR_VERSION}-${size}x${size}-${baseSeed}-${maxRounds}-disjoint-${disjointCount}`,
+      size, regions: grid, solution: queens, generatorVersion: GENERATOR_VERSION,
+      name: `${size}x${size} Logic (${disjointCount} Disjoint)`,
+      difficulty: size <= 5 ? 'easy' : size <= 7 ? 'medium' : size <= 9 ? 'hard' : 'expert',
+      allowDisjointRegions: true,
+    };
+    const growthRounds = Math.min(maxRounds, Math.max(1, size - Math.floor(disjointCount / 2)));
+    for (let round = 0; round < growthRounds; round++) {
+      let changed = false;
+      for (const key of shuffle(Array.from({ length: size * size }, (_, i) => i), random)) {
+        const r = Math.floor(key / size), c = key % size;
+        if (seeds.has(key) || grid[r][c] !== background) continue;
+        const neighbors = new Set<number>();
+        for (const [dr, dc] of directions) {
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nc >= 0 && nr < size && nc < size && grid[nr][nc] !== background) neighbors.add(grid[nr][nc]);
+        }
+        for (const region of shuffle([...neighbors], random)) {
+          grid[r][c] = region;
+          if (connected(grid, size, background) && solvePuzzle(puzzle, 2).length === 1) { changed = true; break; }
+          grid[r][c] = background;
+        }
+      }
+      if (!changed) break;
+    }
+    const candidateRegs = shuffle(Array.from({ length: size }, (_, i) => i).filter(r => r !== background), random);
+    candidateRegs.push(background);
+    for (const targetReg of candidateRegs) {
+      if (countDisjointRegions(grid, size) >= disjointCount) break;
+      if (!connected(grid, size, targetReg)) continue;
+      for (const key of shuffle(Array.from({ length: size * size }, (_, i) => i), random)) {
+        if (seeds.has(key)) continue;
+        const r = Math.floor(key / size), c = key % size;
+        const oldReg = grid[r][c];
+        if (oldReg === targetReg || isOrthoAdj(grid, r, c, targetReg)) continue;
+        const oldWasConnected = connected(grid, size, oldReg);
+        grid[r][c] = targetReg;
+        const oldStillConnected = connected(grid, size, oldReg);
+        const targetNowDisjoint = !connected(grid, size, targetReg);
+        const newDisjointTotal = countDisjointRegions(grid, size);
+        if (
+          targetNowDisjoint &&
+          (oldWasConnected ? oldStillConnected : true) &&
+          newDisjointTotal <= disjointCount &&
+          solvePuzzle(puzzle, 2).length === 1
+        ) {
+          for (const [dr, dc] of shuffle([...directions], random)) {
+            const nr = r + dr, nc = c + dc, nKey = nr * size + nc;
+            if (nr < 0 || nc < 0 || nr >= size || nc >= size || seeds.has(nKey)) continue;
+            const nOld = grid[nr][nc];
+            if (nOld === targetReg || isOrthoAdj(grid, nr, nc, targetReg, key)) continue;
+            grid[nr][nc] = targetReg;
+            if (countDisjointRegions(grid, size) === newDisjointTotal && solvePuzzle(puzzle, 2).length === 1) break;
+            grid[nr][nc] = nOld;
+          }
+          break;
+        }
+        grid[r][c] = oldReg;
+      }
+    }
+    if (countDisjointRegions(grid, size) === disjointCount && validatePuzzleIntegrity(puzzle).valid) {
+      return puzzle;
+    }
+  }
+  throw new Error(`Could not generate ${size}x${size} map with ${disjointCount} disjoint territories`);
 }
 export function generateDailyPuzzle(dateString: string): Puzzle {
   const date = new Date(`${dateString}T00:00:00Z`);

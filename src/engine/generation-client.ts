@@ -4,7 +4,7 @@ import { validatePuzzleIntegrity } from './solver';
 
 // Small in-memory cache avoids unbounded growth while replaying dates.
 const dailyCache = new Map<string, Puzzle>();
-export function requestPuzzle(request: { size?: number; date?: string }, signal: AbortSignal): Promise<Puzzle> {
+export function requestPuzzle(request: { size?: number; date?: string; disjointCount?: number }, signal: AbortSignal): Promise<Puzzle> {
   const key = request.date ? `v${GENERATOR_VERSION}:${request.date}` : undefined;
   if (signal.aborted) return Promise.reject(new DOMException('Cancelled', 'AbortError'));
   if (key && dailyCache.has(key)) return Promise.resolve(structuredClone(dailyCache.get(key)!));

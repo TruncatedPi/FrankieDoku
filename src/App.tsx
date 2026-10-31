@@ -15,6 +15,7 @@ import { RotateCcw, HeartOff, Users } from 'lucide-react';
 import { CatIcon } from './components/CatIcon';
 import { FreePlayModal } from './components/FreePlayModal';
 import { getLevelDifficultyInfo } from './engine/difficulty';
+import { countDisjointRegions } from './engine/generator';
 
 export function App() {
   const {
@@ -256,7 +257,18 @@ export function App() {
       />
 
       {/* Level Select Modal */}
-      {isFreePlayOpen && <FreePlayModal initialSize={currentPuzzle.size} onClose={() => setIsFreePlayOpen(false)} onStart={handleStartFreePlay} />}
+      {isFreePlayOpen && (
+        <FreePlayModal
+          initialSize={currentPuzzle.size}
+          initialDisjointCount={
+            gameMode === 'freeplay'
+              ? countDisjointRegions(currentPuzzle.regions, currentPuzzle.size)
+              : 0
+          }
+          onClose={() => setIsFreePlayOpen(false)}
+          onStart={handleStartFreePlay}
+        />
+      )}
       <LevelSelectModal
         isOpen={isLevelsOpen}
         onClose={() => setIsLevelsOpen(false)}

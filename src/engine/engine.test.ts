@@ -8,7 +8,7 @@ import {
   getSatisfiedUnits,
   generateHint,
 } from './solver';
-import { generateDailyPuzzle, generatePuzzle } from './generator';
+import { countDisjointRegions, generateDailyPuzzle, generatePuzzle } from './generator';
 import { CAMPAIGN_LEVELS, CAMPAIGNS, LEVELS_PER_CAMPAIGN } from '../data/levels';
 import { BoardCell, Puzzle } from './types';
 
@@ -93,5 +93,18 @@ describe('Meowdoku Engine & Rules', () => {
       assert.ok(lvl.size >= 4 && lvl.size <= 12);
       assert.strictEqual(isPuzzleUnique(lvl), true, `Level ${lvl.levelNumber} must have unique solution`);
     }
+  });
+
+  test('Free Play generator creates exact number of disjointed territories across board sizes', () => {
+    for (const [size, counts] of [[4, [0, 1, 2, 3]], [6, [0, 1, 3, 5]], [9, [0, 2, 4, 8]], [12, [0, 3, 6]]] as const) {
+      for (const d of counts) {
+        const puzzle = generatePuzzle(size, 777 + size * 10 + d, 60, d);
+        assert.strictEqual(countDisjointRegions(puzzle.regions, size), d, `Expected ${d} disjoint territories on ${size}x${size}`);
+        assert.strictEqual(Boolean(puzzle.allowDisjointRegions), d > 0);
+        assert.strictEqual(isPuzzleUnique(puzzle), true);
+      }
+    }
+    assert.throws(() => generatePuzzle(5, 42, 60, -1), /Disjoint territory count/);
+    assert.throws(() => generatePuzzle(5, 42, 60, 5), /Disjoint territory count/);
   });
 });

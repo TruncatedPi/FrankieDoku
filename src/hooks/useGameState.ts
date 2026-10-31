@@ -116,7 +116,7 @@ export function useGameState() {
     setIsGenerating(false); setGenerationError(null); setActiveHint(null);
     dispatch({ type: 'start', game: newGame(puzzle, mode, config) });
   }, []);
-  const generate = async (request: { size?: number; date?: string }, mode: GameMode, config: TwoPlayerConfig | null = null) => {
+  const generate = async (request: { size?: number; date?: string; disjointCount?: number }, mode: GameMode, config: TwoPlayerConfig | null = null) => {
     pending.current?.abort();
     const controller = new AbortController(); pending.current = controller;
     setIsGenerating(true); setGenerationError(null);
@@ -168,7 +168,7 @@ export function useGameState() {
     handleSelectCampaignLevel: (level: CampaignLevel) => startGame(level, 'campaign'),
     handleNextLevel: () => { if (hasNextLevel && nextLevel) startGame(nextLevel, 'campaign'); },
     handleSelectDaily: (date: string) => generate({ date }, 'daily'),
-    handleStartFreePlay: (size = 7) => generate({ size }, 'freeplay'),
+    handleStartFreePlay: (size = 7, disjointCount = 0) => generate({ size, disjointCount }, 'freeplay'),
     handleStartTwoPlayer: (config: TwoPlayerConfig & { gridSize: number }) => generate({ size: config.gridSize }, 'twoplayer', config),
     handleUpdateSettings: (partial: Partial<UserSettings>) => setSettings(prev => sanitizeSettings({ ...prev, ...partial })),
     handleResetProgress: () => {
