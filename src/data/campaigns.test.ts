@@ -105,3 +105,43 @@ test('the same authoring tool can create the next hundred-level pack without reu
   // The prospective pack is not registered or written by this test.
   assert.equal(CAMPAIGNS.length, number - 1);
 });
+
+test('Campaign 8 has one or more disjointed territories on every odd level and connected territories on every even level', () => {
+  const campaign8 = CAMPAIGNS.find(c => c.number === 8);
+  assert.ok(campaign8, 'Campaign 8 must be registered');
+  assert.equal(campaign8.levels.length, 100);
+
+  const countDisconnected = (grid: number[][], size: number) => {
+    let disconnected = 0;
+    for (let reg = 0; reg < size; reg++) {
+      let start = -1, count = 0;
+      for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
+        if (grid[r][c] === reg) { start = r * size + c; count++; }
+      }
+      assert.ok(count > 0, `Region ${reg} must not be empty`);
+      const seen = new Set([start]), queue = [start];
+      for (let i = 0; i < queue.length; i++) {
+        const r = Math.floor(queue[i] / size), c = queue[i] % size;
+        for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+          const nr = r + dr, nc = c + dc, key = nr * size + nc;
+          if (nr >= 0 && nc >= 0 && nr < size && nc < size && grid[nr][nc] === reg && !seen.has(key)) {
+            seen.add(key); queue.push(key);
+          }
+        }
+      }
+      if (seen.size !== count) disconnected++;
+    }
+    return disconnected;
+  };
+
+  for (const level of campaign8.levels) {
+    const disCount = countDisconnected(level.regions, level.size);
+    if (level.levelNumber % 2 === 1) {
+      assert.equal(level.allowDisjointRegions, true, `Odd level ${level.id} must set allowDisjointRegions: true`);
+      assert.ok(disCount >= 1, `Odd level ${level.id} must have >= 1 disjointed territory, got ${disCount}`);
+    } else {
+      assert.ok(!level.allowDisjointRegions, `Even level ${level.id} must not set allowDisjointRegions`);
+      assert.equal(disCount, 0, `Even level ${level.id} must have 0 disjointed territories, got ${disCount}`);
+    }
+  }
+});

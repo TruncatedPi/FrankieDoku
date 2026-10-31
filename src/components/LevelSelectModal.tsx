@@ -196,6 +196,15 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                     <span className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">
                       Level {lvl.levelNumber}
                     </span>
+                    {lvl.allowDisjointRegions && (
+                      <span
+                        data-testid={`level-disjoint-badge-${lvl.levelNumber}`}
+                        title="Contains one or more disjointed (split) territories"
+                        className="shrink-0 px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-950/70 text-violet-700 dark:text-violet-300 border border-violet-300/60 dark:border-violet-700/50 text-[9px] font-extrabold tracking-wider uppercase leading-none"
+                      >
+                        SPLIT
+                      </span>
+                    )}
                     {diffInfo?.isHard && (
                       <span
                         data-testid={`level-hard-badge-${lvl.levelNumber}`}

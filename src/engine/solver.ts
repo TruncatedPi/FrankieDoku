@@ -1647,7 +1647,7 @@ export function validatePuzzleIntegrity(puzzle: Puzzle): { valid: boolean; error
     }
 
     if (visited.size !== cells.length) {
-      return { valid: false, error: `Region ${reg} is disconnected` };
+      if (!puzzle.allowDisjointRegions) return { valid: false, error: `Region ${reg} is disconnected` };
     }
   }
 

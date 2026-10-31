@@ -15,7 +15,7 @@ export function validateMap(input: unknown, maxNodes = 1_000_000): MapValidation
   const fail = (message: string) => { result.errors.push(message); return result; };
   if (!Number.isSafeInteger(maxNodes) || maxNodes < 1) return fail('Invalid search budget');
   if (!input || typeof input !== 'object') return fail('Map must be an object');
-  const { size, regions, solution } = input as Puzzle;
+  const { size, regions, solution, allowDisjointRegions } = input as Puzzle;
   if (!Number.isInteger(size) || size < 4 || size > 12) return fail('Size must be an integer from 4 to 12');
   if (!Array.isArray(regions) || regions.length !== size ||
       Array.from(regions).some(row => !Array.isArray(row) || row.length !== size)) {
@@ -47,7 +47,7 @@ export function validateMap(input: unknown, maxNodes = 1_000_000): MapValidation
         }
       }
     }
-    if (seen.size !== cells.length) return fail(`Region ${region} is disconnected`);
+    if (seen.size !== cells.length && !allowDisjointRegions) return fail(`Region ${region} is disconnected`);
   }
 
   // Check the supplied answer directly against the rules, including length and duplicates.

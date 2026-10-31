@@ -62,12 +62,12 @@ describe('Algorithmic Difficulty Scoring & Campaign Size Benchmarks', () => {
         );
       } else {
         assert.ok(
-          campaignHard >= 40 && campaignHard <= 68,
+          campaignHard >= 40 && campaignHard <= 85,
           `Endgame Campaign ${campaign.number} should have an elevated share of HARD levels, got ${campaignHard}`
         );
       }
     }
-    assert.ok(totalHard >= 150 && totalHard <= 220, `Total HARD levels across 700 levels should reflect elevated Campaigns 6-7, got ${totalHard}`);
+    assert.ok(totalHard >= 190 && totalHard <= 300, `Total HARD levels across 800 levels should reflect elevated Campaigns 6-8, got ${totalHard}`);
   });
 
   test('analyzePuzzleDifficulty is deterministic for any puzzle', () => {

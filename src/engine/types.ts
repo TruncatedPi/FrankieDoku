@@ -15,6 +15,7 @@ export interface Puzzle {
   difficulty?: 'easy' | 'medium' | 'hard' | 'expert';
   generatorVersion?: number;
   dailyDate?: string;
+  allowDisjointRegions?: boolean;
 }
 
 export interface BoardCell {
