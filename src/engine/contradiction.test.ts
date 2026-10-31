@@ -11,7 +11,7 @@ import {
 import { generateDailyPuzzle, generatePuzzle } from './generator';
 import { CAMPAIGN_LEVELS, CAMPAIGNS, LEVELS_PER_CAMPAIGN } from '../data/levels';
 import { BoardCell, Puzzle } from './types';
-import { getTerritoryInfo, stripTerritoryTags } from './palettes';
+import { analyzePaletteDistances, getTerritoryInfo, stripTerritoryTags } from './palettes';
 
 describe('Puzzle Integrity & Contradiction Verification', () => {
   test('All registered campaign levels must be 100% contradiction-free with strictly 1 unique solution', () => {
@@ -519,6 +519,36 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
       cell.state = h.type === 'placement' ? 'cat' : 'mark';
     }
     assert.strictEqual(simCells.filter((c) => c.state === 'cat').length, level364.size, 'Level 364 must solve to completion via hints');
+  });
+
+  test('Optimal Cozy Warm palette maximizes 12-color perceptual distance and strictly increases differentiation on smaller maps', () => {
+    const cozyAnalysis = analyzePaletteDistances('cozy');
+    assert.ok(
+      cozyAnalysis.minDeltaE00 >= 30.0,
+      `Expected Cozy Warm 12-color min CIEDE2000 >= 30.0, got ${cozyAnalysis.minDeltaE00}`
+    );
+    assert.strictEqual(
+      cozyAnalysis.problematicPairs.length,
+      0,
+      'Cozy Warm optimal palette must have zero problematic close pairs (dE00 < 20)'
+    );
+
+    // Smaller map sizes must have strictly greater minimum perceptual distance than larger map sizes
+    for (let size = 4; size < 12; size++) {
+      const smallerMin = cozyAnalysis.minDeltaE00ByMapSize[size];
+      const largerMin = cozyAnalysis.minDeltaE00ByMapSize[size + 1];
+      assert.ok(
+        smallerMin > largerMin,
+        `Expected ${size}x${size} min dE00 (${smallerMin}) > ${size + 1}x${size + 1} min dE00 (${largerMin})`
+      );
+    }
+
+    // Verify other palettes are analyzed and report their close color pairs
+    for (const theme of ['pastel', 'matcha', 'lavender', 'midnight', 'ocean'] as const) {
+      const analysis = analyzePaletteDistances(theme);
+      assert.ok(analysis.minDeltaE00 < cozyAnalysis.minDeltaE00);
+      assert.ok(analysis.problematicPairs.length > 0, `Expected ${theme} to report close pairs (< 20 dE00)`);
+    }
   });
 });
 

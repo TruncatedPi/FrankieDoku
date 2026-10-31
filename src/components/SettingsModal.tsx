@@ -29,7 +29,7 @@ const BREEDS: { id: CatBreed; name: string; desc: string }[] = [
 ];
 
 const THEMES: { id: ThemePalette; name: string; colors: string[] }[] = [
-  { id: 'cozy', name: 'Cozy Warm', colors: ['#ef4444', '#0284c7', '#10b981', '#f59e0b'] },
+  { id: 'cozy', name: 'Cozy Warm (Optimal)', colors: ['#ef4444', '#0284c7', '#77ff00', '#114400'] },
   { id: 'pastel', name: 'Sweet Pastel', colors: ['#ff99c8', '#7ee8fa', '#ffd670', '#b388ff'] },
   { id: 'matcha', name: 'Matcha Nature', colors: ['#2d6a4f', '#d97706', '#0284c7', '#c2410c'] },
   { id: 'lavender', name: 'Lavender Dream', colors: ['#c084fc', '#67e8f9', '#f472b6', '#fde047'] },
