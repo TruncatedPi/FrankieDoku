@@ -17,74 +17,74 @@ export const REGION_PALETTES: Record<ThemePalette, string[]> = {
     '#dd00ee', // Orchid Magenta (11)
   ],
   pastel: [
-    '#ff99c8', // Sweet Pink
-    '#fcf6bd', // Lemon Butter
-    '#7ee8fa', // Ice Blue
-    '#b388ff', // Pastel Violet
-    '#e4c1f9', // Orchid Lilac
-    '#ffb38a', // Peach Apricot
-    '#99e2b4', // Seafoam Green
-    '#ffd670', // Sunshine Gold
-    '#f43f5e', // Strawberry Rose
-    '#38bdf8', // Ocean Blue
-    '#a3e635', // Pistachio Lime
-    '#7c3aed', // Deep Iris
+    '#ff0f3c', // Strawberry Rose (0)
+    '#00fff0', // Ice Blue (1)
+    '#005a3c', // Seafoam Green (2)
+    '#ffe1ff', // Sweet Pink (3)
+    '#5a004b', // Deep Iris (4)
+    '#b48700', // Sunshine Gold (5)
+    '#69b4ff', // Ocean Blue (6)
+    '#1ea500', // Pistachio Lime (7)
+    '#e11eff', // Orchid Lilac (8)
+    '#005a96', // Pastel Violet (9)
+    '#f0f0a5', // Lemon Butter (10)
+    '#5a2d00', // Peach Apricot (11)
   ],
   matcha: [
-    '#2d6a4f', // Deep Forest Green
-    '#d97706', // Warm Honey Amber
-    '#0284c7', // Mountain Lake Blue
-    '#c2410c', // Terracotta Clay
-    '#84cc16', // Fresh Lime Sprout
-    '#86198f', // Wild Plum Berry
-    '#fde047', // Bright Sunflower Gold
-    '#99f6e4', // Crisp Mint Foam
-    '#e11d48', // Blossom Rose
-    '#78350f', // Cedar Chestnut
-    '#475569', // Alpine Slate
-    '#4338ca', // Deep Indigo Night
+    '#004b00', // Forest Green (0)
+    '#f05aff', // Plum Berry (1)
+    '#87ff00', // Fresh Lime (2)
+    '#1ec3ff', // Mountain Blue (3)
+    '#ff9600', // Sunflower Gold (4)
+    '#69001e', // Cedar Chestnut (5)
+    '#006978', // Alpine Slate (6)
+    '#2d0096', // Indigo Night (7)
+    '#00ffe1', // Mint Foam (8)
+    '#ff3c4b', // Blossom Rose (9)
+    '#784b00', // Terracotta Clay (10)
+    '#789669', // Honey Amber (11)
   ],
   lavender: [
-    '#c084fc', // Amethyst Purple
-    '#67e8f9', // Starlight Cyan
-    '#f472b6', // Dream Rose
-    '#a7f3d0', // Moonlit Mint
-    '#6366f1', // Periwinkle Indigo
-    '#fde047', // Star Gold
-    '#d946ef', // Orchid Fuchsia
-    '#fb923c', // Sunset Coral
-    '#93c5fd', // Powder Blue
-    '#ef4444', // Crimson Spark
-    '#e9d5ff', // Soft Lavender Mist
-    '#0d9488', // Deep Twilight Teal
+    '#5a005a', // Amethyst Purple (0)
+    '#d2ff00', // Star Gold (1)
+    '#004b00', // Twilight Teal (2)
+    '#ff96ff', // Dream Rose (3)
+    '#d26900', // Sunset Coral (4)
+    '#00e1ff', // Starlight Cyan (5)
+    '#5a1e00', // Crimson Spark (6)
+    '#3c87ff', // Powder Blue (7)
+    '#3ca569', // Moonlit Mint (8)
+    '#004b5a', // Periwinkle Indigo (9)
+    '#e10f69', // Orchid Fuchsia (10)
+    '#ffe1d2', // Lavender Mist (11)
   ],
   midnight: [
-    '#00f0ff', // Electric Neon Cyan
-    '#ff007f', // Hot Neon Magenta
-    '#39ff14', // Electric Neon Lime
-    '#ffb700', // Bright Neon Amber
-    '#b026ff', // Electric Violet
-    '#ff5400', // Vivid Neon Orange
-    '#0044ff', // Deep Electric Royal Blue
-    '#ffff00', // Bright Neon Yellow
-    '#ffffff', // Pure Neon Ice White
-    '#ff0033', // Neon Signal Red
-    '#00ffcc', // Bright Neon Mint Turquoise
-    '#3b82f6', // Electric Sky Blue
+    '#00f0ff', // Neon Cyan (0)
+    '#692dff', // Electric Violet (1)
+    '#004b00', // Mint Turquoise (2)
+    '#ffb700', // Neon Amber (3)
+    '#ffe1ff', // Ice White (4)
+    '#870f00', // Signal Red (5)
+    '#2da54b', // Neon Lime (6)
+    '#ff2d96', // Neon Magenta (7)
+    '#2d2d3c', // Royal Blue (8)
+    '#ff5a1e', // Neon Orange (9)
+    '#0f96ff', // Sky Blue (10)
+    '#c3ff00', // Neon Yellow (11)
   ],
   ocean: [
-    '#0284c7', // Ocean Blue
-    '#0d9488', // Reef Teal
-    '#f59e0b', // Sunlit Sand
-    '#10b981', // Seafoam Mint
-    '#06b6d4', // Tropical Aqua
-    '#ec4899', // Coral Reef
-    '#6366f1', // Deep Abyss
-    '#f43f5e', // Starfish Red
-    '#84cc16', // Sea Kelp
-    '#a855f7', // Sea Anemone
-    '#facc15', // Sunny Pearl
-    '#0e7490', // Pacific Cyan
+    '#0078b4', // Ocean Blue (0)
+    '#ffb41e', // Sunny Pearl (1)
+    '#87002d', // Starfish Red (2)
+    '#003c00', // Reef Teal (3)
+    '#ffd2ff', // Coral Reef (4)
+    '#00ffb4', // Seafoam Mint (5)
+    '#e100f0', // Sea Anemone (6)
+    '#ff695a', // Pacific Cyan (7)
+    '#0000a5', // Deep Abyss (8)
+    '#784b00', // Sunlit Sand (9)
+    '#87e1ff', // Tropical Aqua (10)
+    '#699600', // Sea Kelp (11)
   ],
 };
 
@@ -105,74 +105,74 @@ export const REGION_COLOR_NAMES: Record<ThemePalette, string[]> = {
     'Orchid Magenta',
   ],
   pastel: [
-    'Sweet Pink',
-    'Lemon Butter',
-    'Ice Blue',
-    'Pastel Violet',
-    'Orchid Lilac',
-    'Peach Apricot',
-    'Seafoam Green',
-    'Sunshine Gold',
     'Strawberry Rose',
+    'Ice Blue',
+    'Seafoam Green',
+    'Sweet Pink',
+    'Deep Iris',
+    'Sunshine Gold',
     'Ocean Blue',
     'Pistachio Lime',
-    'Deep Iris',
+    'Orchid Lilac',
+    'Pastel Violet',
+    'Lemon Butter',
+    'Peach Apricot',
   ],
   matcha: [
     'Forest Green',
-    'Honey Amber',
-    'Mountain Blue',
-    'Terracotta Clay',
-    'Fresh Lime',
     'Plum Berry',
+    'Fresh Lime',
+    'Mountain Blue',
     'Sunflower Gold',
-    'Mint Foam',
-    'Blossom Rose',
     'Cedar Chestnut',
     'Alpine Slate',
     'Indigo Night',
+    'Mint Foam',
+    'Blossom Rose',
+    'Terracotta Clay',
+    'Honey Amber',
   ],
   lavender: [
     'Amethyst Purple',
-    'Starlight Cyan',
+    'Star Gold',
+    'Twilight Teal',
     'Dream Rose',
+    'Sunset Coral',
+    'Starlight Cyan',
+    'Crimson Spark',
+    'Powder Blue',
     'Moonlit Mint',
     'Periwinkle Indigo',
-    'Star Gold',
     'Orchid Fuchsia',
-    'Sunset Coral',
-    'Powder Blue',
-    'Crimson Spark',
     'Lavender Mist',
-    'Twilight Teal',
   ],
   midnight: [
     'Neon Cyan',
-    'Neon Magenta',
-    'Neon Lime',
-    'Neon Amber',
     'Electric Violet',
-    'Neon Orange',
-    'Royal Blue',
-    'Neon Yellow',
+    'Mint Turquoise',
+    'Neon Amber',
     'Ice White',
     'Signal Red',
-    'Mint Turquoise',
+    'Neon Lime',
+    'Neon Magenta',
+    'Royal Blue',
+    'Neon Orange',
     'Sky Blue',
+    'Neon Yellow',
   ],
   ocean: [
     'Ocean Blue',
-    'Reef Teal',
-    'Sunlit Sand',
-    'Seafoam Mint',
-    'Tropical Aqua',
-    'Coral Reef',
-    'Deep Abyss',
-    'Starfish Red',
-    'Sea Kelp',
-    'Sea Anemone',
     'Sunny Pearl',
+    'Starfish Red',
+    'Reef Teal',
+    'Coral Reef',
+    'Seafoam Mint',
+    'Sea Anemone',
     'Pacific Cyan',
+    'Deep Abyss',
+    'Sunlit Sand',
+    'Tropical Aqua',
+    'Sea Kelp',
   ],
 };
 

@@ -30,11 +30,11 @@ const BREEDS: { id: CatBreed; name: string; desc: string }[] = [
 
 const THEMES: { id: ThemePalette; name: string; colors: string[] }[] = [
   { id: 'cozy', name: 'Cozy Warm (Optimal)', colors: ['#ef4444', '#0284c7', '#77ff00', '#114400'] },
-  { id: 'pastel', name: 'Sweet Pastel', colors: ['#ff99c8', '#7ee8fa', '#ffd670', '#b388ff'] },
-  { id: 'matcha', name: 'Matcha Nature', colors: ['#2d6a4f', '#d97706', '#0284c7', '#c2410c'] },
-  { id: 'lavender', name: 'Lavender Dream', colors: ['#c084fc', '#67e8f9', '#f472b6', '#fde047'] },
-  { id: 'ocean', name: 'Ocean Breeze', colors: ['#0284c7', '#0d9488', '#06b6d4', '#ec4899'] },
-  { id: 'midnight', name: 'Twilight Neon', colors: ['#00f0ff', '#ff007f', '#39ff14', '#ffb700'] },
+  { id: 'pastel', name: 'Sweet Pastel', colors: ['#ff0f3c', '#00fff0', '#005a3c', '#ffe1ff'] },
+  { id: 'matcha', name: 'Matcha Nature', colors: ['#004b00', '#f05aff', '#87ff00', '#1ec3ff'] },
+  { id: 'lavender', name: 'Lavender Dream', colors: ['#5a005a', '#d2ff00', '#004b00', '#ff96ff'] },
+  { id: 'ocean', name: 'Ocean Breeze', colors: ['#0078b4', '#ffb41e', '#87002d', '#003c00'] },
+  { id: 'midnight', name: 'Twilight Neon', colors: ['#00f0ff', '#692dff', '#004b00', '#ffb700'] },
 ];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({

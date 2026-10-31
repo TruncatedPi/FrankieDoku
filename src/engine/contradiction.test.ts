@@ -543,11 +543,22 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
       );
     }
 
-    // Verify other palettes are analyzed and report their close color pairs
+    // Verify all other palettes satisfy minDeltaE00 > 20.0 on 12x12 maps and > 30.0 on 6x6 maps
     for (const theme of ['pastel', 'matcha', 'lavender', 'midnight', 'ocean'] as const) {
       const analysis = analyzePaletteDistances(theme);
-      assert.ok(analysis.minDeltaE00 < cozyAnalysis.minDeltaE00);
-      assert.ok(analysis.problematicPairs.length > 0, `Expected ${theme} to report close pairs (< 20 dE00)`);
+      assert.ok(
+        analysis.minDeltaE00 > 20.0,
+        `Expected ${theme} 12x12 min CIEDE2000 > 20.0, got ${analysis.minDeltaE00}`
+      );
+      assert.ok(
+        analysis.minDeltaE00ByMapSize[6] > 30.0,
+        `Expected ${theme} 6x6 min CIEDE2000 > 30.0, got ${analysis.minDeltaE00ByMapSize[6]}`
+      );
+      assert.strictEqual(
+        analysis.problematicPairs.length,
+        0,
+        `Expected ${theme} to have zero problematic close pairs (< 20 dE00)`
+      );
     }
   });
 });
