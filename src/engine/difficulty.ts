@@ -23,6 +23,8 @@ export interface LevelDifficultyInfo {
   size: number;
   score: number;
   averageForSize: number;
+  referenceAverageForSize: number;
+  hardThresholdForSize: number;
   stdDevForSize: number;
   ratioToAverage: number;
   zScore: number;
@@ -36,6 +38,8 @@ export interface CampaignSizeDifficultyStats {
   size: number;
   levelCount: number;
   averageScore: number;
+  referenceAverageScore: number;
+  hardThreshold: number;
   stdDev: number;
   minScore: number;
   maxScore: number;
@@ -512,11 +516,58 @@ export function analyzePuzzleDifficulty(puzzle: Puzzle): PuzzleDifficultyMetrics
 }
 
 const campaignSizeCache = new Map<string, CampaignSizeDifficultyStats>();
+const baselineSizeCache = new Map<
+  number,
+  { averageScore: number; stdDev: number; trimmedMean: number }
+>();
+
+function getBaselineSizeBenchmark(size: number): {
+  averageScore: number;
+  stdDev: number;
+  trimmedMean: number;
+} {
+  const cached = baselineSizeCache.get(size);
+  if (cached) return cached;
+
+  const baseCampaigns = CAMPAIGNS.slice(0, Math.min(5, CAMPAIGNS.length));
+  let sumAvg = 0;
+  let sumStd = 0;
+  let sumTrim = 0;
+  let count = 0;
+
+  for (const c of baseCampaigns) {
+    const lvls = c.levels.filter((lvl) => lvl.size === size);
+    if (lvls.length === 0) continue;
+    const scores = lvls.map((lvl) => analyzePuzzleDifficulty(lvl).difficultyScore);
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const std = Math.sqrt(scores.reduce((a, b) => a + (b - avg) ** 2, 0) / scores.length);
+    const sorted = [...scores].sort((a, b) => a - b);
+    const trimmed = sorted.length >= 7 ? sorted.slice(0, -1) : sorted;
+    const trimMean = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
+    sumAvg += avg;
+    sumStd += std;
+    sumTrim += trimMean;
+    count++;
+  }
+
+  const res =
+    count > 0
+      ? {
+          averageScore: sumAvg / count,
+          stdDev: sumStd / count,
+          trimmedMean: sumTrim / count,
+        }
+      : { averageScore: 0, stdDev: 0, trimmedMean: 0 };
+
+  baselineSizeCache.set(size, res);
+  return res;
+}
 
 /**
  * Computes and caches difficulty statistics for all levels of a given map size within a campaign.
- * A level is flagged as `isHard` when its difficulty score is significantly above average
- * for the current campaign's levels of the same map size.
+ * A level is flagged as `isHard` when its difficulty score is significantly above the reference
+ * average for that map size (anchored by the current campaign's average or the Campaigns 1–5
+ * baseline average so harder endgame campaigns can have more levels qualify as HARD).
  */
 export function getCampaignSizeDifficultyStats(
   campaignId: string,
@@ -550,6 +601,15 @@ export function getCampaignSizeDifficultyStats(
   const trimmed = sorted.length >= 7 ? sorted.slice(0, -1) : sorted;
   const trimmedMean = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
 
+  const baseline = campaign.number > 5 ? getBaselineSizeBenchmark(size) : null;
+  const refAvg = baseline ? Math.min(averageScore, baseline.averageScore) : averageScore;
+  const refStdDev = baseline ? Math.min(stdDev, baseline.stdDev) : stdDev;
+  const refTrimmed = baseline ? Math.min(trimmedMean, baseline.trimmedMean) : trimmedMean;
+
+  const hardThreshold = Math.ceil(
+    Math.max(refAvg * 1.35, refAvg + 12, Math.min(refAvg + 0.75 * refStdDev, refAvg * 1.75))
+  );
+
   const byLevelId = new Map<string, LevelDifficultyInfo>();
   const hardLevelIds: string[] = [];
 
@@ -559,12 +619,12 @@ export function getCampaignSizeDifficultyStats(
     const zScore = stdDev > 0 ? (score - averageScore) / stdDev : 0;
 
     const isHard =
-      score > averageScore &&
-      ((score >= averageScore * 1.35 &&
-        score - averageScore >= 12 &&
-        (score >= averageScore + 0.75 * stdDev || score >= averageScore * 1.75)) ||
-        (score >= trimmedMean * 1.85 &&
-          score - trimmedMean >= 25 &&
+      score > refAvg &&
+      ((score >= refAvg * 1.35 &&
+        score - refAvg >= 12 &&
+        (score >= refAvg + 0.75 * refStdDev || score >= refAvg * 1.75)) ||
+        (score >= refTrimmed * 1.85 &&
+          score - refTrimmed >= 25 &&
           metrics.branchingLookaheadSteps > 0));
 
     if (isHard) {
@@ -578,6 +638,8 @@ export function getCampaignSizeDifficultyStats(
       size: level.size,
       score,
       averageForSize: averageScore,
+      referenceAverageForSize: refAvg,
+      hardThresholdForSize: hardThreshold,
       stdDevForSize: stdDev,
       ratioToAverage,
       zScore,
@@ -592,6 +654,8 @@ export function getCampaignSizeDifficultyStats(
     size,
     levelCount: groupLevels.length,
     averageScore,
+    referenceAverageScore: refAvg,
+    hardThreshold,
     stdDev,
     minScore,
     maxScore,

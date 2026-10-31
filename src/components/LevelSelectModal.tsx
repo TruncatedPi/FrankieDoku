@@ -199,7 +199,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                     {diffInfo?.isHard && (
                       <span
                         data-testid={`level-hard-badge-${lvl.levelNumber}`}
-                        title={`Hard for ${lvl.size}×${lvl.size} in Campaign ${diffInfo.campaignNumber} (score ${diffInfo.score} vs ${diffInfo.averageForSize.toFixed(0)} avg)`}
+                        title={`Hard for ${lvl.size}×${lvl.size} in Campaign ${diffInfo.campaignNumber} (score ${diffInfo.score}, threshold ${diffInfo.hardThresholdForSize}, campaign avg ${diffInfo.averageForSize.toFixed(0)})`}
                         className="shrink-0 px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-300/60 dark:border-rose-700/50 text-[9px] font-extrabold tracking-wider uppercase leading-none"
                       >
                         HARD

@@ -45,12 +45,29 @@ describe('Algorithmic Difficulty Scoring & Campaign Size Benchmarks', () => {
         for (const hid of stats.hardLevelIds) {
           const info = stats.byLevelId.get(hid);
           assert.ok(info?.isHard);
-          assert.ok(info.score > stats.averageScore, `Hard level ${hid} must exceed campaign size average`);
+          assert.ok(info.score > stats.referenceAverageScore, `Hard level ${hid} must exceed reference size average`);
+        }
+
+        if (campaign.number >= 6) {
+          assert.ok(
+            stats.averageScore > stats.referenceAverageScore,
+            `Endgame Campaign ${campaign.number} size ${size} average (${stats.averageScore}) should exceed baseline (${stats.referenceAverageScore})`
+          );
         }
       }
-      assert.ok(campaignHard >= 8 && campaignHard <= 25, `Campaign ${campaign.number} should have a selective subset of HARD levels, got ${campaignHard}`);
+      if (campaign.number <= 5) {
+        assert.ok(
+          campaignHard >= 8 && campaignHard <= 25,
+          `Campaign ${campaign.number} should have a selective subset of HARD levels, got ${campaignHard}`
+        );
+      } else {
+        assert.ok(
+          campaignHard >= 40 && campaignHard <= 68,
+          `Endgame Campaign ${campaign.number} should have an elevated share of HARD levels, got ${campaignHard}`
+        );
+      }
     }
-    assert.ok(totalHard >= 70 && totalHard <= 160, `Total HARD levels across 700 levels should be a selective outlier subset, got ${totalHard}`);
+    assert.ok(totalHard >= 150 && totalHard <= 220, `Total HARD levels across 700 levels should reflect elevated Campaigns 6-7, got ${totalHard}`);
   });
 
   test('analyzePuzzleDifficulty is deterministic for any puzzle', () => {
