@@ -119,36 +119,36 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="w-full max-w-[540px] mx-auto pt-1.5 pb-1 sm:pt-3 sm:pb-2 px-2 sm:px-3 flex flex-col gap-1.5 sm:gap-2 select-none">
       {/* Top Bar: Brand & Quick Action Buttons */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-1.5 min-w-0">
         {/* Brand Logo & Name */}
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-2xl bg-amber-100 dark:bg-amber-900/40 p-1 shadow-sm border border-amber-300/40 flex items-center justify-center">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-2xl bg-amber-100 dark:bg-amber-900/40 p-1 shadow-sm border border-amber-300/40 flex items-center justify-center">
             <CatIcon breed={catBreed || 'frankie'} expression="happy" />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5 leading-none mb-0.5">
-              <h1 className="text-xl font-bold tracking-tight text-amber-950 dark:text-amber-100 flex items-center gap-1">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 leading-none mb-0.5 min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-amber-950 dark:text-amber-100 truncate">
                 FrankieDoku!
               </h1>
               <span
                 data-testid="app-version"
-                className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-amber-200/80 dark:bg-amber-900/50 text-amber-950 dark:text-amber-200 border border-amber-300/50 shadow-xs"
+                className="shrink-0 text-[9px] sm:text-[10px] font-mono font-bold px-1 sm:px-1.5 py-0.5 rounded-md bg-amber-200/80 dark:bg-amber-900/50 text-amber-950 dark:text-amber-200 border border-amber-300/50 shadow-xs"
               >
                 {APP_VERSION}
               </span>
             </div>
-            <span className="text-[10px] text-amber-700/80 dark:text-amber-300/80 font-medium">
+            <span className="block truncate text-[10px] text-amber-700/80 dark:text-amber-300/80 font-medium">
               100% Ad-Free & Cozy
             </span>
           </div>
         </div>
 
-        {/* Action icons */}
-        <div className="flex items-center gap-1">
+        {/* Action icons (never shrink or clip, even on narrow iPhone screens) */}
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <button
             type="button"
             onClick={onOpenInstall}
-            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
             title="Install on iPhone / Android"
             aria-label="Install App"
           >
@@ -158,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onToggleSound}
-            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
             title={soundEnabled ? 'Mute' : 'Unmute'}
             aria-label="Toggle Sound"
           >
@@ -169,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onToggleDarkMode}
-              className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
@@ -180,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenSettings}
-            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 transition-colors"
             title="Settings"
             aria-label="Settings"
           >
