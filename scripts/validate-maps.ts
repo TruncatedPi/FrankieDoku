@@ -1,3 +1,4 @@
+import { PATTERN_MAPS } from '../src/data/patterns';
 import { parseArgs } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
@@ -83,10 +84,10 @@ try {
         ids.add(puzzle.id);
       }
       if (source !== 'file' && puzzle.solution === undefined) result.errors.push('Built-in map is missing its stored solution');
-      if (source === 'campaign' && result.valid) {
+      if ((source === 'campaign' || source === 'pattern') && result.valid) {
         const key = mapFingerprint(puzzle);
         const previous = campaignLayouts.get(key);
-        if ((getCampaignForLevel(puzzle.id)?.number ?? 1) > 1 && previous) {
+        if ((source === 'pattern' || (getCampaignForLevel(puzzle.id)?.number ?? 1) > 1) && previous) {
           result.errors.push(`Map is a recolored, rotated, or reflected copy of ${previous}`);
         }
         campaignLayouts.set(key, puzzle.id);
@@ -117,6 +118,7 @@ try {
   } else {
     if (CAMPAIGN_LEVELS.length !== CAMPAIGNS.length * LEVELS_PER_CAMPAIGN) throw new Error('Every campaign must contain a full 100-level pack');
     CAMPAIGN_LEVELS.forEach(map => check(map.id, 'campaign', () => map));
+    PATTERN_MAPS.forEach(map => check(map.id, 'pattern', () => map));
     check('daily-fallback', 'fallback', () => createDailyFallbackPuzzle('fallback'));
     for (let day = 0; day < days; day++) {
       const date = new Date(startDate);
@@ -136,7 +138,7 @@ try {
   const summary = { checked: results.length, passed: results.length - failed, failed, dailyFallbacks, elapsedMs };
   console.log(`${summary.passed}/${summary.checked} maps passed; ${failed} failed; ${(elapsedMs / 1000).toFixed(2)}s`);
   if (dailyFallbacks) console.log(`  ${dailyFallbacks} daily dates used the same 5x5 fallback map`);
-  for (const source of ['campaign', 'fallback', 'daily', 'generated', 'file']) {
+  for (const source of ['campaign', 'pattern', 'fallback', 'daily', 'generated', 'file']) {
     const group = results.filter(result => result.source === source);
     if (!group.length) continue;
     const slowest = group.reduce((a, b) => a.generationMs + a.validationMs > b.generationMs + b.validationMs ? a : b);

@@ -69,6 +69,8 @@ export interface UserSettings {
   catBreed: CatBreed;
   theme: ThemePalette;
   darkMode: boolean;
+  gridLineColor: "black" | "white";
+  regionLabels: boolean;
 }
 
 export interface LevelProgress {

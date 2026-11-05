@@ -168,6 +168,7 @@ export function useGameState() {
     handleSelectCampaignLevel: (level: CampaignLevel) => startGame(level, 'campaign'),
     handleNextLevel: () => { if (hasNextLevel && nextLevel) startGame(nextLevel, 'campaign'); },
     handleSelectDaily: (date: string) => generate({ date }, 'daily'),
+    handleStartPattern: (puzzle: Puzzle) => startGame(puzzle, 'freeplay'),
     handleStartFreePlay: (size = 7, disjointCount = 0) => generate({ size, disjointCount }, 'freeplay'),
     handleStartTwoPlayer: (config: TwoPlayerConfig & { gridSize: number }) => generate({ size: config.gridSize }, 'twoplayer', config),
     handleUpdateSettings: (partial: Partial<UserSettings>) => setSettings(prev => sanitizeSettings({ ...prev, ...partial })),

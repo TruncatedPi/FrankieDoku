@@ -1,5 +1,5 @@
 import { BoardCell, Coordinate, Puzzle } from './types';
-import { isValidPlacement } from './solver';
+import { isValidPlacement, solvePuzzle } from './solver';
 import { CAMPAIGNS, getCampaignForLevel } from '../data/levels';
 
 export interface PuzzleDifficultyMetrics {
@@ -13,6 +13,7 @@ export interface PuzzleDifficultyMetrics {
   branchingLookaheadSteps: number;
   maxLookaheadTier: number;
   stepsBeforeFirstCat: number;
+  oracleFallbackSteps: number;
   difficultyScore: number;
 }
 
@@ -29,6 +30,8 @@ export interface LevelDifficultyInfo {
   ratioToAverage: number;
   zScore: number;
   isHard: boolean;
+  isSuperHard: boolean;
+  superHardThresholdForSize: number;
   metrics: PuzzleDifficultyMetrics;
 }
 
@@ -57,7 +60,11 @@ export interface CampaignSizeDifficultyStats {
  *  - Contiguous Subset Parity (k rows/cols containing or covered by k territories) -> weight 4 + 3*k
  *  - Multi-Branch / Lookahead Contradictions (when all direct pattern rules stall) -> weight 18..38
  */
+const metricsCache = new WeakMap<Puzzle, PuzzleDifficultyMetrics>();
+
 export function analyzePuzzleDifficulty(puzzle: Puzzle): PuzzleDifficultyMetrics {
+  const cached = metricsCache.get(puzzle);
+  if (cached) return cached;
   const { size, regions } = puzzle;
   const cells: BoardCell[] = [];
   const regionSizes = new Array<number>(size).fill(0);
@@ -88,13 +95,17 @@ export function analyzePuzzleDifficulty(puzzle: Puzzle): PuzzleDifficultyMetrics
   let stepsBeforeFirstCat = 0;
   let firstCatPlaced = false;
   let score = 0;
+  let oracleFallbackSteps = 0;
 
   // Structural starting complexity: puzzles with no tiny 1-2 cell regions lack an immediate starter anchor
   if (minRegionSize >= 4) score += 10;
   else if (minRegionSize === 3) score += 5;
   else if (minRegionSize === 2) score += 2;
 
-  const solSet = new Set((puzzle.solution || []).map((s) => `${s.row},${s.col}`));
+  // Derive the witness: ratings must not change when stored answers are omitted or stale.
+  const answer = solvePuzzle(puzzle, 1)[0];
+  if (!answer) throw new Error('Cannot rate an unsolvable puzzle');
+  const solSet = new Set(answer.map((s) => `${s.row},${s.col}`));
 
   for (let iter = 0; iter < 500; iter++) {
     const placedCats = cells.filter((c) => c.state === 'cat');
@@ -494,13 +505,14 @@ export function analyzePuzzleDifficulty(puzzle: Puzzle): PuzzleDifficultyMetrics
     );
     for (const s of siblings) s.state = 'mark';
 
+    if (bestTier === 5) oracleFallbackSteps++;
     branchingLookaheadSteps++;
     maxLookaheadTier = Math.max(maxLookaheadTier, bestTier);
     const tierWeights: Record<number, number> = { 2: 18, 3: 24, 4: 30, 5: 38 };
     score += tierWeights[bestTier] || 30;
   }
 
-  return {
+  const metrics = {
     size,
     minRegionSize,
     nakedSingleSteps,
@@ -511,8 +523,11 @@ export function analyzePuzzleDifficulty(puzzle: Puzzle): PuzzleDifficultyMetrics
     branchingLookaheadSteps,
     maxLookaheadTier,
     stepsBeforeFirstCat,
+    oracleFallbackSteps,
     difficultyScore: score,
   };
+  metricsCache.set(puzzle, metrics);
+  return metrics;
 }
 
 const campaignSizeCache = new Map<string, CampaignSizeDifficultyStats>();
@@ -610,6 +625,7 @@ export function getCampaignSizeDifficultyStats(
     Math.max(refAvg * 1.35, refAvg + 12, Math.min(refAvg + 0.75 * refStdDev, refAvg * 1.75))
   );
 
+  const superHardThreshold = Math.ceil(Math.max(hardThreshold + 25, refAvg * 2.25, refAvg + 1.75 * refStdDev, refAvg + 40));
   const byLevelId = new Map<string, LevelDifficultyInfo>();
   const hardLevelIds: string[] = [];
 
@@ -644,6 +660,8 @@ export function getCampaignSizeDifficultyStats(
       ratioToAverage,
       zScore,
       isHard,
+      superHardThresholdForSize: superHardThreshold,
+      isSuperHard: isHard && metrics.branchingLookaheadSteps >= 3 && score >= superHardThreshold,
       metrics,
     });
   }

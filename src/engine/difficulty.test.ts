@@ -77,3 +77,11 @@ describe('Algorithmic Difficulty Scoring & Campaign Size Benchmarks', () => {
     assert.deepStrictEqual(first, second);
   });
 });
+
+ test('ratings do not depend on stored answers and super-hard is a strict subset', () => {
+ const map=CAMPAIGN_LEVELS[363];
+ assert.deepStrictEqual(analyzePuzzleDifficulty({...map,solution:undefined}),analyzePuzzleDifficulty(map));
+ let count=0;
+ for(const level of CAMPAIGN_LEVELS){const info=getLevelDifficultyInfo(level.id)!;if(info.isSuperHard){count++;assert.ok(info.isHard);assert.ok(info.score>=info.superHardThresholdForSize);}}
+ assert.ok(count>0 && count<CAMPAIGN_LEVELS.length/4);
+ });

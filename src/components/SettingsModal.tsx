@@ -311,6 +311,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          <section className="space-y-2">
+            <h3 className="font-bold">Board readability</h3>
+            <label className="flex justify-between items-center">Cell dividing lines
+              <select aria-label="Cell dividing lines" value={settings.gridLineColor} onChange={e => onUpdateSettings({gridLineColor: e.target.value as 'black' | 'white'})} className="rounded p-2 bg-white text-black">
+                <option value="black">Black</option><option value="white">White</option>
+              </select>
+            </label>
+            <label className="flex justify-between items-center">Show region numbers
+              <input type="checkbox" checked={settings.regionLabels} onChange={e => onUpdateSettings({regionLabels: e.target.checked})} />
+            </label>
+            <p className="text-xs">Matching numbers identify the same territory, including disconnected pieces.</p>
+          </section>
           {/* Theme Palette */}
           <div className="space-y-2">
             <span className="font-bold text-slate-800 dark:text-slate-100 block text-sm">

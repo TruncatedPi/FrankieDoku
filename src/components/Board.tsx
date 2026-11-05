@@ -20,6 +20,8 @@ interface BoardProps {
   disabled?: boolean;
   playerBreeds?: Record<1 | 2, CatBreed>;
   activeHint?: HintResult | null;
+  gridLineColor?: "black" | "white";
+  regionLabels?: boolean;
 }
 
 export const Board: React.FC<BoardProps> = ({
@@ -37,7 +39,12 @@ export const Board: React.FC<BoardProps> = ({
   disabled = false,
   playerBreeds,
   activeHint = null,
+  gridLineColor = "black",
+  regionLabels = false,
 }) => {
+  const boardRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const lineColor = gridLineColor === "white" ? "#ffffff" : "#000000";
   const size = puzzle.size;
   const palette = REGION_PALETTES[theme] || REGION_PALETTES.cozy;
   const isLargeGrid = size >= 9;
@@ -54,6 +61,7 @@ export const Board: React.FC<BoardProps> = ({
   }, [activeHint]);
 
   const isDragging = useRef(false);
+  const activePointer = useRef<number | null>(null);
   const dragStartCellRef = useRef<{ row: number; col: number } | null>(null);
   const lastHoveredCellRef = useRef<{ row: number; col: number } | null>(null);
   const lastTappedRef = useRef<{
@@ -80,11 +88,13 @@ export const Board: React.FC<BoardProps> = ({
       onCellAction(row, col, 'cat');
       return;
     }
-    if (!e.isPrimary) return;
+    if (!e.isPrimary || e.button !== 0) return;
+    try { boardRef.current?.setPointerCapture(e.pointerId); } catch { /* Synthetic or already cancelled pointer. */ }
 
     const now = Date.now();
     recordBoardPrimaryPointerDown(now);
 
+    activePointer.current = e.pointerId;
     isDragging.current = true;
     dragStartCellRef.current = { row, col };
     lastHoveredCellRef.current = { row, col };
@@ -139,8 +149,37 @@ export const Board: React.FC<BoardProps> = ({
     onCellAction(row, col, 'drag');
   };
 
+  const moveAt = (x: number, y: number) => {
+    if (disabled || !isDragging.current) return;
+    const rect = gridRef.current?.getBoundingClientRect();
+    if (!rect || x < rect.left || y < rect.top || x >= rect.right || y >= rect.bottom) return;
+    const col = Math.floor((x - rect.left) * size / rect.width);
+    const row = Math.floor((y - rect.top) * size / rect.height);
+    const from = lastHoveredCellRef.current ?? {row, col};
+    const steps = Math.max(Math.abs(row - from.row), Math.abs(col - from.col), 1);
+    for (let i = 1; i <= steps; i++) handlePointerEnter(Math.round(from.row + (row - from.row) * i / steps), Math.round(from.col + (col - from.col) * i / steps));
+    if (row !== dragStartCellRef.current?.row || col !== dragStartCellRef.current?.col) lastTappedRef.current = null;
+  };
+  const moveRef = useRef(moveAt);
+  moveRef.current = moveAt;
   useEffect(() => {
-    const handlePointerUp = () => {
+    const board = boardRef.current;
+    // Safari can retain touch capture on a child. A non-passive native listener
+    // keeps the gesture on the board and uses geometry, independent of SVG hit targets.
+    const move = (event: TouchEvent) => {
+      if (!isDragging.current || event.touches.length !== 1) return;
+      if (event.cancelable) event.preventDefault();
+      moveRef.current(event.touches[0].clientX, event.touches[0].clientY);
+    };
+    board?.addEventListener('touchmove', move, { passive: false });
+    return () => board?.removeEventListener('touchmove', move);
+  }, []);
+
+  useEffect(() => {
+    const handlePointerUp = (event: Event) => {
+      if (event instanceof PointerEvent && activePointer.current !== null && event.pointerId !== activePointer.current) return;
+      activePointer.current = null;
+      if (event.type === "pointercancel" || event.type === "blur") lastTappedRef.current = null;
       if (isDragging.current && lastTappedRef.current) {
         const now = Date.now();
         lastTappedRef.current.time = now;
@@ -169,6 +208,7 @@ export const Board: React.FC<BoardProps> = ({
 
   return (
     <div
+      ref={boardRef}
       data-testid="game-board"
       className="relative w-full aspect-square mx-auto touch-none select-none rounded-2xl sm:rounded-3xl p-1 sm:p-2.5 shadow-xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-amber-900/10 dark:border-white/10 transition-all duration-300 shrink-0"
       style={{
@@ -177,17 +217,14 @@ export const Board: React.FC<BoardProps> = ({
       }}
       onContextMenu={(e) => e.preventDefault()}
       aria-busy={disabled}
-      onPointerMove={e => {
-        if (e.pointerType !== 'touch' || !isDragging.current || disabled) return;
-        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLButtonElement>('[data-cell]');
-        if (target && e.currentTarget.contains(target)) {
-          handlePointerEnter(Number(target.dataset.row), Number(target.dataset.col));
-        }
-      }}
+      onPointerMove={e => { if (e.isPrimary) moveAt(e.clientX, e.clientY); }}
     >
       <div
+        ref={gridRef}
         className="w-full h-full grid rounded-xl sm:rounded-2xl overflow-hidden shadow-inner border-2 border-black dark:border-black"
         style={{
+          borderColor: lineColor,
+          touchAction: "none",
           gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
         }}
@@ -255,17 +292,19 @@ export const Board: React.FC<BoardProps> = ({
                 isSatisfiedUnit && !isPrimaryHint && !involved ? 'opacity-40 grayscale-[25%]' : 'opacity-100'
               }`}
               style={{
+                touchAction: "none",
                 backgroundColor: cell.hasConflict && highlightConflicts ? undefined : bgCol,
                 borderTopWidth: hasTopBorder ? regionBorderWidth : '0.5px',
                 borderBottomWidth: hasBottomBorder ? regionBorderWidth : '0.5px',
                 borderLeftWidth: hasLeftBorder ? regionBorderWidth : '0.5px',
                 borderRightWidth: hasRightBorder ? regionBorderWidth : '0.5px',
-                borderTopColor: '#000000',
-                borderBottomColor: '#000000',
-                borderLeftColor: '#000000',
-                borderRightColor: '#000000',
+                borderTopColor: lineColor,
+                borderBottomColor: lineColor,
+                borderLeftColor: lineColor,
+                borderRightColor: lineColor,
               }}
             >
+              {regionLabels && <span aria-hidden="true" className="absolute top-0 left-0 z-10 rounded bg-white text-black text-[9px] leading-none p-0.5 pointer-events-none">{reg + 1}</span>}
               {/* Placed Cat Sprite */}
               {cell.state === 'cat' && (
                 <div className={`${isLargeGrid ? 'w-[90%] h-[90%]' : 'w-[84%] h-[84%]'} animate-pop-in flex items-center justify-center drop-shadow-md`}>

@@ -10,6 +10,7 @@ const DAILY_KEY = 'meowdoku_daily_v1';
 const STATS_KEY = 'meowdoku_stats_v1';
 const SAVED_GAME_KEY = 'meowdoku_saved_session_v2';
 export const DEFAULT_SETTINGS: UserSettings = {
+  gridLineColor: "black", regionLabels: false,
   soundEnabled: true, hapticsEnabled: true, volume: 0.6, playStyle: 'classic',
   autoCross: true, highlightConflicts: true, dimCompleted: true, catBreed: 'frankie', theme: 'cozy', darkMode: false,
 };
@@ -28,7 +29,7 @@ function write(key: string, value: unknown) {
 export function sanitizeSettings(value: unknown): UserSettings {
   const result = { ...DEFAULT_SETTINGS };
   if (!record(value)) return result;
-  for (const key of ['soundEnabled', 'hapticsEnabled', 'autoCross', 'highlightConflicts', 'dimCompleted'] as const) {
+  for (const key of ['soundEnabled', 'hapticsEnabled', 'autoCross', 'highlightConflicts', 'dimCompleted', 'regionLabels'] as const) {
     if (typeof value[key] === 'boolean') result[key] = value[key];
   }
   if (typeof value.volume === 'number' && Number.isFinite(value.volume)) result.volume = Math.max(0, Math.min(1, value.volume));
@@ -40,6 +41,7 @@ export function sanitizeSettings(value: unknown): UserSettings {
   } else if (value.theme === 'midnight') {
     result.darkMode = true;
   }
+  if (value.gridLineColor === "black" || value.gridLineColor === "white") result.gridLineColor = value.gridLineColor;
   return result;
 }
 export const loadSettings = () => sanitizeSettings(read(SETTINGS_KEY));

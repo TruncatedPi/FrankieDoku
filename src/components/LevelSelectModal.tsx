@@ -192,7 +192,7 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                 }`}
               >
                 <div className="flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                     <span className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">
                       Level {lvl.levelNumber}
                     </span>
@@ -208,10 +208,10 @@ export const LevelSelectModal: React.FC<LevelSelectModalProps> = ({
                     {diffInfo?.isHard && (
                       <span
                         data-testid={`level-hard-badge-${lvl.levelNumber}`}
-                        title={`Hard for ${lvl.size}×${lvl.size} in Campaign ${diffInfo.campaignNumber} (score ${diffInfo.score}, threshold ${diffInfo.hardThresholdForSize}, campaign avg ${diffInfo.averageForSize.toFixed(0)})`}
+                        title={`${diffInfo.isSuperHard ? "Super-hard" : "Hard"} for ${lvl.size}×${lvl.size} in Campaign ${diffInfo.campaignNumber} (score ${diffInfo.score}, threshold ${diffInfo.isSuperHard ? diffInfo.superHardThresholdForSize : diffInfo.hardThresholdForSize}, campaign avg ${diffInfo.averageForSize.toFixed(0)})`}
                         className="shrink-0 px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-300/60 dark:border-rose-700/50 text-[9px] font-extrabold tracking-wider uppercase leading-none"
                       >
-                        HARD
+                        {diffInfo.isSuperHard ? "SUPER-HARD" : "HARD"}
                       </span>
                     )}
                   </div>

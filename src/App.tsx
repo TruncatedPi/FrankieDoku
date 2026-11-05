@@ -56,6 +56,7 @@ export function App() {
     handleNextLevel,
     handleSelectDaily,
     handleStartFreePlay,
+    handleStartPattern,
     handleStartTwoPlayer,
     handleUpdateSettings,
     handleResetProgress,
@@ -165,6 +166,8 @@ export function App() {
           theme={settings.theme}
           dimCompleted={settings.dimCompleted}
           highlightConflicts={settings.highlightConflicts}
+          gridLineColor={settings.gridLineColor}
+          regionLabels={settings.regionLabels}
           satisfiedRows={satisfiedRows}
           satisfiedCols={satisfiedCols}
           satisfiedRegions={satisfiedRegions}
@@ -267,6 +270,7 @@ export function App() {
           }
           onClose={() => setIsFreePlayOpen(false)}
           onStart={handleStartFreePlay}
+          onPattern={handleStartPattern}
         />
       )}
       <LevelSelectModal

@@ -1,13 +1,18 @@
+import { PATTERN_MAPS } from '../data/patterns';
+import { REGION_PALETTES } from '../engine/palettes';
+import type { Puzzle } from '../engine/types';
 import { useState } from 'react';
 import { BOARD_SIZES } from '../engine/constants';
 
 export function FreePlayModal({
   onClose,
   onStart,
+  onPattern,
   initialSize,
   initialDisjointCount = 0,
 }: {
   onClose: () => void;
+  onPattern: (puzzle: Puzzle) => void;
   onStart: (size: number, disjointCount: number) => void;
   initialSize: number;
   initialDisjointCount?: number;
@@ -31,7 +36,7 @@ export function FreePlayModal({
         role="dialog"
         aria-modal="true"
         aria-label="Free Play"
-        className="w-full max-w-sm rounded-3xl bg-white dark:bg-cozy-darkCard p-6 shadow-2xl border border-amber-200 dark:border-white/10"
+        className="w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-3xl bg-white dark:bg-cozy-darkCard p-6 shadow-2xl border border-amber-200 dark:border-white/10"
       >
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-bold text-lg text-slate-800 dark:text-slate-100">Free Play</h2>
@@ -115,6 +120,14 @@ export function FreePlayModal({
         >
           Start Free Play
         </button>
+        <h3 className="font-bold mt-4 mb-2">Pattern collection</h3>
+        <p className="text-xs mb-2">9×9 picture puzzles. Matching colors form one territory, even when separated.</p>
+        <div className="grid grid-cols-2 gap-2">
+          {PATTERN_MAPS.map(puzzle => <button key={puzzle.id} type="button" onClick={() => { onPattern(puzzle); onClose(); }} className="border rounded-xl p-2 text-xs font-bold">
+            <svg viewBox="0 0 9 9" className="w-full h-20 mb-1" aria-hidden="true">{puzzle.regions.flatMap((row,r) => row.map((region,c) => <rect key={r*9+c} x={c} y={r} width="1" height="1" fill={REGION_PALETTES.cozy[region]} />))}</svg>
+            {puzzle.name}
+          </button>)}
+        </div>
       </section>
     </div>
   );
