@@ -55,12 +55,9 @@ export const FormattedHintText: React.FC<{ text: string; theme?: ThemePalette }>
           return (
             <span
               key={idx}
-              style={{
-                color: displayColor,
-                textShadow: '0 0 1px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
-              }}
-              className="font-extrabold inline-block px-1 py-0.5 rounded bg-black/5 dark:bg-white/10 mx-0.5 align-baseline"
+              className="font-semibold inline-flex items-center gap-1 text-slate-950 dark:text-white align-baseline"
             >
+              <span aria-hidden="true" className="inline-block w-3 h-3 rounded-sm border border-slate-500 shrink-0" style={{backgroundColor: displayColor}} />
               {displayLabel}
             </span>
           );
@@ -304,30 +301,27 @@ export const Header: React.FC<HeaderProps> = ({
         {activeHint && (
           <div
             data-testid="hint-overlay"
-            className="absolute inset-0 z-20 flex flex-col justify-start p-2 rounded-2xl bg-gradient-to-r from-amber-50/95 via-orange-50/95 to-amber-50/95 dark:from-amber-950/95 dark:via-stone-900/95 dark:to-amber-950/95 border border-amber-400/60 shadow-md backdrop-blur-md animate-pop-in overflow-y-auto"
+            className="absolute inset-0 z-20 flex flex-col justify-start p-3 rounded-2xl bg-white dark:bg-slate-950 border border-amber-400/60 shadow-md backdrop-blur-md animate-pop-in overflow-y-auto"
           >
             <div className="flex items-start justify-between gap-1.5">
               <div className="flex items-start gap-1.5 flex-1 min-w-0">
                 <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-300 shrink-0 mt-0.5 fill-amber-400" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-amber-950 dark:text-amber-100 leading-tight">
-                    <FormattedHintText text={activeHint.explanation} theme={theme} />
+                  <p className="text-base font-bold text-slate-950 dark:text-white leading-snug">
+                    {activeHint.explanation.includes("doesn't belong here") ? 'Remove this cat.' : activeHint.type === 'placement' ? 'Place a cat here.' : 'Mark this square with an X.'}
                   </p>
-                  {activeHint.steps && activeHint.steps.length > 0 && (
-                    <ol className="mt-1 space-y-0.5 pl-3.5 text-[10px] sm:text-[11px] font-medium text-amber-900/90 dark:text-amber-200/90 list-decimal list-outside leading-tight">
-                      {activeHint.steps.map((step, idx) => (
-                        <li key={idx}>
-                          <FormattedHintText text={step} theme={theme} />
-                        </li>
-                      ))}
-                    </ol>
-                  )}
+                  <details key={activeHint.explanation} className="mt-1 text-sm text-slate-900 dark:text-slate-100 leading-relaxed">
+                    <summary className="cursor-pointer font-semibold"><span className="underline underline-offset-2">Why?</span> <span className="font-normal">Row {activeHint.row + 1}, column {activeHint.col + 1}</span></summary>
+                    {activeHint.steps?.length ? <ol className="mt-2 space-y-2 pl-5 list-decimal">
+                      {activeHint.steps.map((step,idx) => <li key={idx}><FormattedHintText text={step} theme={theme} /></li>)}
+                    </ol> : <p className="mt-2"><FormattedHintText text={activeHint.explanation} theme={theme} /></p>}
+                  </details>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onDismissHint}
-                className="p-1 rounded-lg hover:bg-amber-400/20 text-amber-900 dark:text-amber-100 transition-colors shrink-0"
+                className="p-2 min-w-10 min-h-10 rounded-lg hover:bg-amber-400/20 text-amber-900 dark:text-amber-100 transition-colors shrink-0"
                 aria-label="Dismiss Hint"
               >
                 <X className="w-4 h-4" />

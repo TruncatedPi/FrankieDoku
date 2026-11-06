@@ -162,6 +162,11 @@ test('hint overlays menu area without jumping the board and displays logical ste
   // Hint overlay must be visible covering menu
   const hintOverlay = page.locator('[data-testid="hint-overlay"]');
   await expect(hintOverlay).toBeVisible();
+  await expect(hintOverlay.locator("p").first()).toHaveText(/^(Mark this square with an X\.|Place a cat here\.|Remove this cat\.)$/);
+  await expect(hintOverlay.locator("p").first()).toHaveCSS("font-size", "16px");
+  await expect(hintOverlay.locator("details")).not.toHaveAttribute("open", "");
+  await hintOverlay.getByText("Why?", {exact:true}).click();
+  await expect(hintOverlay.locator("details")).toHaveAttribute("open", "");
 
   // The board's vertical position relative to the document must NOT jump down (within subpixel rendering tolerance)
   const boxAfter = (await board.boundingBox())!;
