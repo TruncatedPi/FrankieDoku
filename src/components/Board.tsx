@@ -1,8 +1,13 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { BoardCell, CatBreed, HintInvolvedCell, HintResult, InputMode, Puzzle, ThemePalette } from '../engine/types';
 import { CatIcon } from './CatIcon';
-import { Sparkles } from 'lucide-react';
-import { REGION_PALETTES } from '../engine/palettes';
+import { Sparkles, Eye, X } from 'lucide-react';
+import {
+  REGION_PALETTES,
+  REGION_COLOR_NAMES,
+  getTerritoryPatternImage,
+  analyzeTerritoryIslands,
+} from '../engine/palettes';
 import { recordBoardPrimaryPointerDown } from '../utils/interactionGuard';
 
 interface BoardProps {
@@ -20,8 +25,8 @@ interface BoardProps {
   disabled?: boolean;
   playerBreeds?: Record<1 | 2, CatBreed>;
   activeHint?: HintResult | null;
-  gridLineColor?: "black" | "white";
-  regionLabels?: boolean;
+  gridLineColor?: 'black' | 'white';
+  territoryPatterns?: boolean;
 }
 
 export const Board: React.FC<BoardProps> = ({
@@ -39,18 +44,26 @@ export const Board: React.FC<BoardProps> = ({
   disabled = false,
   playerBreeds,
   activeHint = null,
-  gridLineColor = "black",
-  regionLabels = false,
+  gridLineColor = 'black',
+  territoryPatterns = true,
 }) => {
   const boardRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const lineColor = gridLineColor === "white" ? "#ffffff" : "#000000";
+  const lineColor = gridLineColor === 'white' ? '#ffffff' : '#000000';
   const size = puzzle.size;
   const palette = REGION_PALETTES[theme] || REGION_PALETTES.cozy;
+  const colorNames = REGION_COLOR_NAMES[theme] || REGION_COLOR_NAMES.cozy;
   const isLargeGrid = size >= 9;
-  const regionBorderWidth = isLargeGrid ? '1.75px' : '2.5px';
+  const regionBorderWidth = isLargeGrid ? '2px' : '2.75px';
 
-  const involvedMap = React.useMemo(() => {
+  const [spotlightRegion, setSpotlightRegion] = useState<number | null>(null);
+
+  const { islandCounts, cellCounts } = useMemo(
+    () => analyzeTerritoryIslands(puzzle.regions, size),
+    [puzzle.regions, size]
+  );
+
+  const involvedMap = useMemo(() => {
     const map = new Map<string, HintInvolvedCell>();
     if (activeHint?.involvedCells) {
       for (const inv of activeHint.involvedCells) {
@@ -74,6 +87,10 @@ export const Board: React.FC<BoardProps> = ({
   } | null>(null);
 
   useEffect(() => {
+    setSpotlightRegion(null);
+  }, [puzzle]);
+
+  useEffect(() => {
     lastTappedRef.current = null;
     isDragging.current = false;
     dragStartCellRef.current = null;
@@ -82,6 +99,13 @@ export const Board: React.FC<BoardProps> = ({
 
   const handlePointerDown = (row: number, col: number, e: React.PointerEvent) => {
     if (disabled) return;
+    // Alt-click or middle-click toggles territory spotlight for quick inspection
+    if (e.altKey || e.button === 1) {
+      e.preventDefault();
+      const targetReg = puzzle.regions[row][col];
+      setSpotlightRegion((prev) => (prev === targetReg ? null : targetReg));
+      return;
+    }
     // Secondary click (right click) = always toggle Cat
     if (e.button === 2) {
       e.preventDefault();
@@ -89,7 +113,11 @@ export const Board: React.FC<BoardProps> = ({
       return;
     }
     if (!e.isPrimary || e.button !== 0) return;
-    try { boardRef.current?.setPointerCapture(e.pointerId); } catch { /* Synthetic or already cancelled pointer. */ }
+    try {
+      boardRef.current?.setPointerCapture(e.pointerId);
+    } catch {
+      /* Synthetic or already cancelled pointer. */
+    }
 
     const now = Date.now();
     recordBoardPrimaryPointerDown(now);
@@ -153,12 +181,19 @@ export const Board: React.FC<BoardProps> = ({
     if (disabled || !isDragging.current) return;
     const rect = gridRef.current?.getBoundingClientRect();
     if (!rect || x < rect.left || y < rect.top || x >= rect.right || y >= rect.bottom) return;
-    const col = Math.floor((x - rect.left) * size / rect.width);
-    const row = Math.floor((y - rect.top) * size / rect.height);
-    const from = lastHoveredCellRef.current ?? {row, col};
+    const col = Math.floor(((x - rect.left) * size) / rect.width);
+    const row = Math.floor(((y - rect.top) * size) / rect.height);
+    const from = lastHoveredCellRef.current ?? { row, col };
     const steps = Math.max(Math.abs(row - from.row), Math.abs(col - from.col), 1);
-    for (let i = 1; i <= steps; i++) handlePointerEnter(Math.round(from.row + (row - from.row) * i / steps), Math.round(from.col + (col - from.col) * i / steps));
-    if (row !== dragStartCellRef.current?.row || col !== dragStartCellRef.current?.col) lastTappedRef.current = null;
+    for (let i = 1; i <= steps; i++) {
+      handlePointerEnter(
+        Math.round(from.row + ((row - from.row) * i) / steps),
+        Math.round(from.col + ((col - from.col) * i) / steps)
+      );
+    }
+    if (row !== dragStartCellRef.current?.row || col !== dragStartCellRef.current?.col) {
+      lastTappedRef.current = null;
+    }
   };
   const moveRef = useRef(moveAt);
   moveRef.current = moveAt;
@@ -177,9 +212,11 @@ export const Board: React.FC<BoardProps> = ({
 
   useEffect(() => {
     const handlePointerUp = (event: Event) => {
-      if (event instanceof PointerEvent && activePointer.current !== null && event.pointerId !== activePointer.current) return;
+      if (event instanceof PointerEvent && activePointer.current !== null && event.pointerId !== activePointer.current) {
+        return;
+      }
       activePointer.current = null;
-      if (event.type === "pointercancel" || event.type === "blur") lastTappedRef.current = null;
+      if (event.type === 'pointercancel' || event.type === 'blur') lastTappedRef.current = null;
       if (isDragging.current && lastTappedRef.current) {
         const now = Date.now();
         lastTappedRef.current.time = now;
@@ -207,201 +244,333 @@ export const Board: React.FC<BoardProps> = ({
   }, []);
 
   return (
-    <div
-      ref={boardRef}
-      data-testid="game-board"
-      className="relative w-full aspect-square mx-auto touch-none select-none rounded-2xl sm:rounded-3xl p-1 sm:p-2.5 shadow-xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-amber-900/10 dark:border-white/10 transition-all duration-300 shrink-0"
-      style={{
-        maxWidth: 'min(calc(100vw - 8px), 520px, calc(100dvh - 236px))',
-        maxHeight: 'min(calc(100vw - 8px), 520px, calc(100dvh - 236px))',
-      }}
-      onContextMenu={(e) => e.preventDefault()}
-      aria-busy={disabled}
-      onPointerMove={e => { if (e.isPrimary) moveAt(e.clientX, e.clientY); }}
-    >
+    <div className="w-full flex flex-col items-center gap-1.5 shrink-0">
       <div
-        ref={gridRef}
-        className="w-full h-full grid rounded-xl sm:rounded-2xl overflow-hidden shadow-inner border-2 border-black dark:border-black"
+        ref={boardRef}
+        data-testid="game-board"
+        className="relative w-full aspect-square mx-auto touch-none select-none rounded-2xl sm:rounded-3xl p-1 sm:p-2.5 shadow-xl bg-white/80 dark:bg-cozy-darkCard/80 backdrop-blur-md border border-amber-900/10 dark:border-white/10 transition-all duration-300 shrink-0"
         style={{
-          borderColor: lineColor,
-          touchAction: "none",
-          gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
+          maxWidth: 'min(calc(100vw - 8px), 520px, calc(100dvh - 268px))',
+          maxHeight: 'min(calc(100vw - 8px), 520px, calc(100dvh - 268px))',
+        }}
+        onContextMenu={(e) => e.preventDefault()}
+        aria-busy={disabled}
+        onPointerMove={(e) => {
+          if (e.isPrimary) moveAt(e.clientX, e.clientY);
         }}
       >
-        {cells.map((cell) => {
-          const reg = cell.region;
-          const bgCol = palette[reg % palette.length];
+        <div
+          ref={gridRef}
+          className="w-full h-full grid rounded-xl sm:rounded-2xl overflow-hidden shadow-inner border-2 border-black dark:border-black"
+          style={{
+            borderColor: lineColor,
+            touchAction: 'none',
+            gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
+          }}
+        >
+          {cells.map((cell) => {
+            const reg = cell.region;
+            const bgCol = palette[reg % palette.length];
+            const patternImage = territoryPatterns ? getTerritoryPatternImage(reg) : undefined;
+            const isDisjointTerritory = (islandCounts[reg] ?? 1) > 1;
+            const isSpotlightTarget = spotlightRegion === reg;
+            const isSpotlightDimmed = spotlightRegion !== null && spotlightRegion !== reg;
 
-          const isPrimaryHint = Boolean(activeHint && activeHint.row === cell.row && activeHint.col === cell.col);
-          const involved = involvedMap.get(`${cell.row},${cell.col}`);
-          const isConflictInvolved = involved?.reason === 'conflict';
+            const isPrimaryHint = Boolean(activeHint && activeHint.row === cell.row && activeHint.col === cell.col);
+            const involved = involvedMap.get(`${cell.row},${cell.col}`);
+            const isConflictInvolved = involved?.reason === 'conflict';
 
-          // Faded previews
-          const showFadedCat = cell.state === 'empty' && (
-            (isPrimaryHint && activeHint?.type === 'placement') ||
-            involved?.fadedState === 'cat'
-          );
-          const showFadedMark = cell.state === 'empty' && !showFadedCat && (
-            (isPrimaryHint && activeHint?.type === 'elimination') ||
-            involved?.fadedState === 'mark'
-          );
+            // Faded previews
+            const showFadedCat =
+              cell.state === 'empty' &&
+              ((isPrimaryHint && activeHint?.type === 'placement') || involved?.fadedState === 'cat');
+            const showFadedMark =
+              cell.state === 'empty' &&
+              !showFadedCat &&
+              ((isPrimaryHint && activeHint?.type === 'elimination') || involved?.fadedState === 'mark');
 
-          // Compute border thickness based on whether neighbor has different region
-          const hasTopBorder = cell.row > 0 && puzzle.regions[cell.row - 1][cell.col] !== reg;
-          const hasBottomBorder = cell.row < size - 1 && puzzle.regions[cell.row + 1][cell.col] !== reg;
-          const hasLeftBorder = cell.col > 0 && puzzle.regions[cell.row][cell.col - 1] !== reg;
-          const hasRightBorder = cell.col < size - 1 && puzzle.regions[cell.row][cell.col + 1] !== reg;
+            // Compute border thickness based on whether neighbor has different region
+            const hasTopBorder = cell.row > 0 && puzzle.regions[cell.row - 1][cell.col] !== reg;
+            const hasBottomBorder = cell.row < size - 1 && puzzle.regions[cell.row + 1][cell.col] !== reg;
+            const hasLeftBorder = cell.col > 0 && puzzle.regions[cell.row][cell.col - 1] !== reg;
+            const hasRightBorder = cell.col < size - 1 && puzzle.regions[cell.row][cell.col + 1] !== reg;
 
-          // Unit satisfaction dimming
-          const isSatisfiedUnit =
-            dimCompleted &&
-            cell.state === 'empty' &&
-            (satisfiedRows.has(cell.row) ||
-              satisfiedCols.has(cell.col) ||
-              satisfiedRegions.has(reg));
+            // Directional inner contour shadows along territory boundaries so regions read as sculpted puzzle pieces.
+            // Disjointed territories get a stronger inner double-contour rim along their island edges.
+            const insetShadows: string[] = [];
+            const rimColor = isDisjointTerritory
+              ? 'rgba(255, 255, 255, 0.55)'
+              : 'rgba(255, 255, 255, 0.34)';
+            const rimShade = isDisjointTerritory
+              ? 'rgba(0, 0, 0, 0.28)'
+              : 'rgba(0, 0, 0, 0.18)';
+            const rimPx = isDisjointTerritory ? '1.5px' : '1px';
+            if (hasTopBorder) insetShadows.push(`inset 0 ${rimPx} 0 0 ${rimColor}`);
+            if (hasLeftBorder) insetShadows.push(`inset ${rimPx} 0 0 0 ${rimColor}`);
+            if (hasBottomBorder) insetShadows.push(`inset 0 -${rimPx} 0 0 ${rimShade}`);
+            if (hasRightBorder) insetShadows.push(`inset -${rimPx} 0 0 0 ${rimShade}`);
+            if (isSpotlightTarget) {
+              insetShadows.push('inset 0 0 0 2px rgba(255, 255, 255, 0.92)');
+            }
 
-          return (
-            <button
-              key={`${cell.row}-${cell.col}`}
-              type="button"
-              aria-label={`Row ${cell.row + 1}, Col ${cell.col + 1}, Region ${reg + 1}, ${cell.state}${cell.state === 'mark' && cell.markColor ? ` (${cell.markColor})` : ''}`}
-              disabled={disabled}
-              data-cell="true"
-              data-row={cell.row}
-              data-col={cell.col}
-              data-state={cell.state}
-              data-mark-color={cell.markColor ?? 'black'}
-              data-player={cell.player}
-              onClick={e => { if (e.detail === 0) onCellAction(cell.row, cell.col, 'tap'); }}
-              onPointerDown={(e) => handlePointerDown(cell.row, cell.col, e)}
-              onPointerEnter={() => handlePointerEnter(cell.row, cell.col)}
-              className={`relative flex items-center justify-center transition-all duration-150 focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:z-20 outline-none select-none ${
-                cell.hasConflict && highlightConflicts
-                  ? 'bg-rose-400/80 animate-shake ring-2 ring-rose-500 z-10'
-                  : ''
-              } ${
-                isPrimaryHint
-                  ? 'ring-4 ring-amber-400 animate-pulse z-20 rounded-lg shadow-lg'
-                  : involved?.highlight
-                  ? isConflictInvolved
-                    ? 'ring-2 ring-rose-500 bg-rose-400/30 z-10 rounded-lg'
-                    : 'ring-2 ring-amber-400/90 bg-amber-400/20 z-10 rounded-lg'
-                  : ''
-              } ${
-                isSatisfiedUnit && !isPrimaryHint && !involved ? 'opacity-40 grayscale-[25%]' : 'opacity-100'
-              }`}
-              style={{
-                touchAction: "none",
-                backgroundColor: cell.hasConflict && highlightConflicts ? undefined : bgCol,
-                borderTopWidth: hasTopBorder ? regionBorderWidth : '0.5px',
-                borderBottomWidth: hasBottomBorder ? regionBorderWidth : '0.5px',
-                borderLeftWidth: hasLeftBorder ? regionBorderWidth : '0.5px',
-                borderRightWidth: hasRightBorder ? regionBorderWidth : '0.5px',
-                borderTopColor: lineColor,
-                borderBottomColor: lineColor,
-                borderLeftColor: lineColor,
-                borderRightColor: lineColor,
-              }}
-            >
-              {regionLabels && <span aria-hidden="true" className="absolute top-0 left-0 z-10 rounded bg-white text-black text-[9px] leading-none p-0.5 pointer-events-none">{reg + 1}</span>}
-              {/* Placed Cat Sprite */}
-              {cell.state === 'cat' && (
-                <div className={`${isLargeGrid ? 'w-[90%] h-[90%]' : 'w-[84%] h-[84%]'} animate-pop-in flex items-center justify-center drop-shadow-md`}>
-                  <CatIcon
-                    breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
-                    hasConflict={Boolean((cell.hasConflict && highlightConflicts) || isConflictInvolved)}
-                    expression={cell.hasConflict || isConflictInvolved ? 'shocked' : 'happy'}
-                  />
-                </div>
-              )}
+            // Unit satisfaction dimming
+            const isSatisfiedUnit =
+              dimCompleted &&
+              cell.state === 'empty' &&
+              (satisfiedRows.has(cell.row) || satisfiedCols.has(cell.col) || satisfiedRegions.has(reg));
 
-              {/* Faded Ghost Cat (Hint preview) */}
-              {showFadedCat && (
-                <div className={`${isLargeGrid ? 'w-[90%] h-[90%]' : 'w-[84%] h-[84%]'} flex items-center justify-center opacity-50 scale-90 pointer-events-none animate-pulse drop-shadow-sm`}>
-                  <CatIcon
-                    breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
-                    hasConflict={false}
-                    expression="happy"
-                  />
-                </div>
-              )}
-
-              {/* 'X' Elimination Mark (Normal or Mistake) with Crisp White Outline */}
-              {cell.state === 'mark' && (
-                <div className="w-[90%] h-[90%] flex items-center justify-center animate-bounce-small pointer-events-none select-none">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-full h-full drop-shadow-sm"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+            return (
+              <button
+                key={`${cell.row}-${cell.col}`}
+                type="button"
+                aria-label={`Row ${cell.row + 1}, Col ${cell.col + 1}, Territory ${colorNames[reg % colorNames.length]}, ${cell.state}${cell.state === 'mark' && cell.markColor ? ` (${cell.markColor})` : ''}`}
+                disabled={disabled}
+                data-cell="true"
+                data-row={cell.row}
+                data-col={cell.col}
+                data-region={reg}
+                data-state={cell.state}
+                data-mark-color={cell.markColor ?? 'black'}
+                data-player={cell.player}
+                data-spotlight={
+                  spotlightRegion === null ? undefined : isSpotlightTarget ? 'active' : 'dimmed'
+                }
+                onClick={(e) => {
+                  if (e.detail === 0) onCellAction(cell.row, cell.col, 'tap');
+                }}
+                onPointerDown={(e) => handlePointerDown(cell.row, cell.col, e)}
+                onPointerEnter={() => handlePointerEnter(cell.row, cell.col)}
+                className={`relative flex items-center justify-center transition-all duration-150 focus-visible:ring-4 focus-visible:ring-blue-600 focus-visible:z-20 outline-none select-none ${
+                  cell.hasConflict && highlightConflicts
+                    ? 'bg-rose-400/80 animate-shake ring-2 ring-rose-500 z-10'
+                    : ''
+                } ${
+                  isPrimaryHint
+                    ? 'ring-4 ring-amber-400 animate-pulse z-20 rounded-lg shadow-lg'
+                    : involved?.highlight
+                    ? isConflictInvolved
+                      ? 'ring-2 ring-rose-500 bg-rose-400/30 z-10 rounded-lg'
+                      : 'ring-2 ring-amber-400/90 bg-amber-400/20 z-10 rounded-lg'
+                    : isSpotlightTarget
+                    ? 'z-10 brightness-105'
+                    : ''
+                } ${
+                  isSpotlightDimmed
+                    ? 'opacity-25 saturate-50'
+                    : isSatisfiedUnit && !isPrimaryHint && !involved && !isSpotlightTarget
+                    ? 'opacity-40 grayscale-[25%]'
+                    : 'opacity-100'
+                }`}
+                style={{
+                  touchAction: 'none',
+                  backgroundColor: cell.hasConflict && highlightConflicts ? undefined : bgCol,
+                  backgroundImage:
+                    cell.hasConflict && highlightConflicts ? undefined : patternImage,
+                  backgroundRepeat: 'repeat',
+                  boxShadow: insetShadows.length > 0 ? insetShadows.join(', ') : undefined,
+                  borderTopWidth: hasTopBorder ? regionBorderWidth : '0.5px',
+                  borderBottomWidth: hasBottomBorder ? regionBorderWidth : '0.5px',
+                  borderLeftWidth: hasLeftBorder ? regionBorderWidth : '0.5px',
+                  borderRightWidth: hasRightBorder ? regionBorderWidth : '0.5px',
+                  borderTopColor: lineColor,
+                  borderBottomColor: lineColor,
+                  borderLeftColor: lineColor,
+                  borderRightColor: lineColor,
+                }}
+              >
+                {/* Placed Cat Sprite */}
+                {cell.state === 'cat' && (
+                  <div
+                    className={`${isLargeGrid ? 'w-[90%] h-[90%]' : 'w-[84%] h-[84%]'} animate-pop-in flex items-center justify-center drop-shadow-md`}
                   >
-                    {/* High-contrast crisp white outline/backdrop stroke */}
-                    <line x1="18" y1="6" x2="6" y2="18" stroke="#ffffff" strokeWidth="5.5" />
-                    <line x1="6" y1="6" x2="18" y2="18" stroke="#ffffff" strokeWidth="5.5" />
-                    {/* Inner stroke: Vibrant Red if mistake or red mark, Dark Slate if normal black mark */}
-                    <line
-                      x1="18"
-                      y1="6"
-                      x2="6"
-                      y2="18"
-                      stroke={cell.isMistake || cell.markColor === 'red' ? '#ef4444' : '#0f172a'}
-                      strokeWidth="3.2"
+                    <CatIcon
+                      breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
+                      hasConflict={Boolean((cell.hasConflict && highlightConflicts) || isConflictInvolved)}
+                      expression={cell.hasConflict || isConflictInvolved ? 'shocked' : 'happy'}
                     />
-                    <line
-                      x1="6"
-                      y1="6"
-                      x2="18"
-                      y2="18"
-                      stroke={cell.isMistake || cell.markColor === 'red' ? '#ef4444' : '#0f172a'}
-                      strokeWidth="3.2"
-                    />
-                  </svg>
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Faded Ghost X Mark (Hint preview) */}
-              {showFadedMark && (
-                <div className="w-[85%] h-[85%] flex items-center justify-center opacity-50 scale-85 pointer-events-none select-none">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-full h-full drop-shadow-xs"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                {/* Faded Ghost Cat (Hint preview) */}
+                {showFadedCat && (
+                  <div
+                    className={`${isLargeGrid ? 'w-[90%] h-[90%]' : 'w-[84%] h-[84%]'} flex items-center justify-center opacity-50 scale-90 pointer-events-none animate-pulse drop-shadow-sm`}
                   >
-                    <line x1="18" y1="6" x2="6" y2="18" stroke="#ffffff" strokeWidth="5.5" />
-                    <line x1="6" y1="6" x2="18" y2="18" stroke="#ffffff" strokeWidth="5.5" />
-                    <line
-                      x1="18"
-                      y1="6"
-                      x2="6"
-                      y2="18"
-                      stroke={involved?.reason === 'starved_unit' || isConflictInvolved ? '#ef4444' : '#0f172a'}
-                      strokeWidth="3.2"
+                    <CatIcon
+                      breed={cell.player && playerBreeds ? playerBreeds[cell.player] : catBreed}
+                      hasConflict={false}
+                      expression="happy"
                     />
-                    <line
-                      x1="6"
-                      y1="6"
-                      x2="18"
-                      y2="18"
-                      stroke={involved?.reason === 'starved_unit' || isConflictInvolved ? '#ef4444' : '#0f172a'}
-                      strokeWidth="3.2"
-                    />
-                  </svg>
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Hint Sparkle Indicator on primary hinted cell */}
-              {isPrimaryHint && (
-                <div className={`absolute ${isLargeGrid ? 'top-0.5 right-0.5' : 'top-1 right-1'} text-amber-500 animate-bounce`}>
-                  <Sparkles className={`${isLargeGrid ? 'w-2.5 h-2.5 sm:w-3.5 sm:h-3.5' : 'w-3.5 h-3.5'} fill-amber-400`} />
-                </div>
-              )}
-            </button>
-          );
-        })}
+                {/* 'X' Elimination Mark (Normal or Mistake) with Crisp White Outline */}
+                {cell.state === 'mark' && (
+                  <div className="w-[90%] h-[90%] flex items-center justify-center animate-bounce-small pointer-events-none select-none">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-full h-full drop-shadow-sm"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {/* High-contrast crisp white outline/backdrop stroke */}
+                      <line x1="18" y1="6" x2="6" y2="18" stroke="#ffffff" strokeWidth="5.5" />
+                      <line x1="6" y1="6" x2="18" y2="18" stroke="#ffffff" strokeWidth="5.5" />
+                      {/* Inner stroke: Vibrant Red if mistake or red mark, Dark Slate if normal black mark */}
+                      <line
+                        x1="18"
+                        y1="6"
+                        x2="6"
+                        y2="18"
+                        stroke={cell.isMistake || cell.markColor === 'red' ? '#ef4444' : '#0f172a'}
+                        strokeWidth="3.2"
+                      />
+                      <line
+                        x1="6"
+                        y1="6"
+                        x2="18"
+                        y2="18"
+                        stroke={cell.isMistake || cell.markColor === 'red' ? '#ef4444' : '#0f172a'}
+                        strokeWidth="3.2"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Faded Ghost X Mark (Hint preview) */}
+                {showFadedMark && (
+                  <div className="w-[85%] h-[85%] flex items-center justify-center opacity-50 scale-85 pointer-events-none select-none">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-full h-full drop-shadow-xs"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" stroke="#ffffff" strokeWidth="5.5" />
+                      <line x1="6" y1="6" x2="18" y2="18" stroke="#ffffff" strokeWidth="5.5" />
+                      <line
+                        x1="18"
+                        y1="6"
+                        x2="6"
+                        y2="18"
+                        stroke={involved?.reason === 'starved_unit' || isConflictInvolved ? '#ef4444' : '#0f172a'}
+                        strokeWidth="3.2"
+                      />
+                      <line
+                        x1="6"
+                        y1="6"
+                        x2="18"
+                        y2="18"
+                        stroke={involved?.reason === 'starved_unit' || isConflictInvolved ? '#ef4444' : '#0f172a'}
+                        strokeWidth="3.2"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                {/* Hint Sparkle Indicator on primary hinted cell */}
+                {isPrimaryHint && (
+                  <div
+                    className={`absolute ${isLargeGrid ? 'top-0.5 right-0.5' : 'top-1 right-1'} text-amber-500 animate-bounce`}
+                  >
+                    <Sparkles className={`${isLargeGrid ? 'w-2.5 h-2.5 sm:w-3.5 sm:h-3.5' : 'w-3.5 h-3.5'} fill-amber-400`} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Interactive Territory Spotlight Bar: tap any territory swatch to isolate all of its squares & disjointed islands */}
+      <div
+        data-testid="territory-spotlight-bar"
+        className="w-full max-w-[520px] px-2 py-1 rounded-2xl bg-white/75 dark:bg-cozy-darkCard/75 backdrop-blur-sm border border-amber-900/10 dark:border-white/10 shadow-xs flex items-center justify-between gap-1.5"
+      >
+        <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+          <Eye className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+          <span className="hidden sm:inline">Spotlight:</span>
+        </div>
+
+        <div
+          role="toolbar"
+          aria-label="Territory Spotlight"
+          className="flex items-center justify-center gap-1 flex-1 overflow-x-auto no-scrollbar py-0.5"
+        >
+          {Array.from({ length: size }, (_, reg) => {
+            const bgCol = palette[reg % palette.length];
+            const patternImg = territoryPatterns ? getTerritoryPatternImage(reg) : undefined;
+            const name = colorNames[reg % colorNames.length];
+            const islands = islandCounts[reg] ?? 1;
+            const squares = cellCounts[reg] ?? 0;
+            const isSatisfied = satisfiedRegions.has(reg);
+            const isActive = spotlightRegion === reg;
+
+            return (
+              <button
+                key={reg}
+                type="button"
+                data-testid={`spotlight-chip-${reg}`}
+                aria-pressed={isActive}
+                aria-label={`Spotlight Territory ${name} (${squares} squares${islands > 1 ? `, ${islands} islands` : ''})`}
+                title={`Territory ${name}: ${squares} squares${islands > 1 ? ` across ${islands} split islands` : ''} — tap to spotlight`}
+                onClick={() => setSpotlightRegion((prev) => (prev === reg ? null : reg))}
+                className={`relative h-5 min-w-[22px] px-1 rounded-md border transition-all flex items-center justify-center gap-0.5 shrink-0 ${
+                  isActive
+                    ? 'ring-2 ring-amber-500 dark:ring-amber-400 border-white scale-110 z-10 shadow-sm'
+                    : 'border-black/30 dark:border-white/30 hover:scale-105'
+                } ${isSatisfied && !isActive ? 'opacity-55' : 'opacity-100'}`}
+                style={{
+                  backgroundColor: bgCol,
+                  backgroundImage: patternImg,
+                  backgroundRepeat: 'repeat',
+                }}
+              >
+                {islands > 1 && (
+                  <span
+                    data-testid={`spotlight-chip-islands-${reg}`}
+                    className="px-0.5 rounded bg-black/65 text-white text-[8px] font-extrabold leading-tight tracking-tighter"
+                  >
+                    ×{islands}
+                  </span>
+                )}
+                {isSatisfied && (
+                  <span
+                    aria-hidden="true"
+                    className="px-0.5 rounded bg-black/60 text-emerald-300 text-[8px] font-extrabold leading-tight"
+                  >
+                    ✓
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {spotlightRegion !== null ? (
+          <button
+            type="button"
+            data-testid="spotlight-clear"
+            onClick={() => setSpotlightRegion(null)}
+            aria-label="Clear territory spotlight"
+            className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 text-[10px] font-bold hover:bg-amber-200 transition-colors"
+          >
+            <span className="truncate max-w-[72px] sm:max-w-[110px]">
+              {colorNames[spotlightRegion % colorNames.length]}
+              {(islandCounts[spotlightRegion] ?? 1) > 1
+                ? ` (×${islandCounts[spotlightRegion]})`
+                : ''}
+            </span>
+            <X className="w-3 h-3 shrink-0" />
+          </button>
+        ) : (
+          <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium shrink-0 hidden sm:inline">
+            Tap swatch to isolate
+          </span>
+        )}
       </div>
     </div>
   );

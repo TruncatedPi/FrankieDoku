@@ -70,7 +70,7 @@ export interface UserSettings {
   theme: ThemePalette;
   darkMode: boolean;
   gridLineColor: "black" | "white";
-  regionLabels: boolean;
+  territoryPatterns: boolean;
 }
 
 export interface LevelProgress {

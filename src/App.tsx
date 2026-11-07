@@ -167,7 +167,7 @@ export function App() {
           dimCompleted={settings.dimCompleted}
           highlightConflicts={settings.highlightConflicts}
           gridLineColor={settings.gridLineColor}
-          regionLabels={settings.regionLabels}
+          territoryPatterns={settings.territoryPatterns}
           satisfiedRows={satisfiedRows}
           satisfiedCols={satisfiedCols}
           satisfiedRegions={satisfiedRegions}

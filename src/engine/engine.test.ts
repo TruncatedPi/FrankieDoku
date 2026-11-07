@@ -9,6 +9,7 @@ import {
   generateHint,
 } from './solver';
 import { countDisjointRegions, generateDailyPuzzle, generatePuzzle } from './generator';
+import { analyzeTerritoryIslands, getTerritoryPatternImage } from './palettes';
 import { CAMPAIGN_LEVELS, CAMPAIGNS, LEVELS_PER_CAMPAIGN } from '../data/levels';
 import { BoardCell, Puzzle } from './types';
 
@@ -106,5 +107,15 @@ describe('Meowdoku Engine & Rules', () => {
     }
     assert.throws(() => generatePuzzle(5, 42, 60, -1), /Disjoint territory count/);
     assert.throws(() => generatePuzzle(5, 42, 60, 5), /Disjoint territory count/);
+  });
+
+  test('analyzeTerritoryIslands and getTerritoryPatternImage identify split islands and distinct textures', () => {
+    const disjointPuzzle = generatePuzzle(6, 1234, 60, 2);
+    const { islandCounts, cellCounts } = analyzeTerritoryIslands(disjointPuzzle.regions, 6);
+    assert.strictEqual(islandCounts.filter((c) => c > 1).length, 2);
+    assert.strictEqual(cellCounts.reduce((a, b) => a + b, 0), 36);
+    for (let reg = 1; reg < 12; reg++) {
+      assert.ok(getTerritoryPatternImage(reg)?.startsWith('url("data:image/svg+xml,'));
+    }
   });
 });

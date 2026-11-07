@@ -404,3 +404,107 @@ export function analyzePaletteDistances(
   };
 }
 
+const svgDataUri = (svg: string) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+
+/**
+ * 12 subtle, non-intrusive geometric SVG micro-patterns (one per territory index 0..11)
+ * using dual-tone translucent strokes so they remain gently visible on both light and dark
+ * territory fills without competing with X marks or cat icons.
+ */
+export const REGION_PATTERN_IMAGES: (string | undefined)[] = [
+  // 0: Smooth solid (reference anchor)
+  undefined,
+  // 1: 45° diagonal pinstripes
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path d="M-3,3 L3,-3 M0,12 L12,0 M9,15 L15,9" stroke="rgba(255,255,255,0.24)" stroke-width="1.4"/><path d="M-2,4 L4,-2 M1,13 L13,1 M10,16 L16,10" stroke="rgba(0,0,0,0.11)" stroke-width="1"/></svg>`
+  ),
+  // 2: Soft polka dots
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><circle cx="3" cy="3" r="1.35" fill="rgba(255,255,255,0.26)"/><circle cx="9" cy="9" r="1.35" fill="rgba(0,0,0,0.13)"/></svg>`
+  ),
+  // 3: -45° reverse diagonal stripes
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path d="M9,-3 L15,3 M0,0 L12,12 M-3,9 L3,15" stroke="rgba(255,255,255,0.24)" stroke-width="1.4"/><path d="M8,-2 L14,4 M-1,1 L11,13 M-4,10 L2,16" stroke="rgba(0,0,0,0.11)" stroke-width="1"/></svg>`
+  ),
+  // 4: Subtle diamond lattice
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><path d="M7,1 L13,7 L7,13 L1,7 Z" fill="none" stroke="rgba(255,255,255,0.24)" stroke-width="1.2"/></svg>`
+  ),
+  // 5: Horizontal linen lines
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><line x1="0" y1="3" x2="12" y2="3" stroke="rgba(255,255,255,0.24)" stroke-width="1.3"/><line x1="0" y1="9" x2="12" y2="9" stroke="rgba(0,0,0,0.11)" stroke-width="1.1"/></svg>`
+  ),
+  // 6: Vertical fluted lines
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><line x1="3" y1="0" x2="3" y2="12" stroke="rgba(255,255,255,0.24)" stroke-width="1.3"/><line x1="9" y1="0" x2="9" y2="12" stroke="rgba(0,0,0,0.11)" stroke-width="1.1"/></svg>`
+  ),
+  // 7: Gentle chevron / wave
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="10" viewBox="0 0 14 10"><path d="M0,7 L7,2 L14,7" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.3"/></svg>`
+  ),
+  // 8: Micro plus-cross grid
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><path d="M7,4 L7,10 M4,7 L10,7" stroke="rgba(255,255,255,0.26)" stroke-width="1.3" stroke-linecap="round"/></svg>`
+  ),
+  // 9: Soft micro rings
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="3.2" fill="none" stroke="rgba(255,255,255,0.24)" stroke-width="1.2"/></svg>`
+  ),
+  // 10: Fine crosshatch weave
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path d="M0,0 L12,12 M12,0 L0,12" stroke="rgba(255,255,255,0.18)" stroke-width="1.1"/></svg>`
+  ),
+  // 11: Staggered micro-squares
+  svgDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="2.5" height="2.5" fill="rgba(255,255,255,0.25)"/><rect x="8" y="8" width="2.5" height="2.5" fill="rgba(0,0,0,0.12)"/></svg>`
+  ),
+];
+
+export function getTerritoryPatternImage(regIndex: number): string | undefined {
+  return REGION_PATTERN_IMAGES[Math.abs(regIndex) % REGION_PATTERN_IMAGES.length];
+}
+
+/**
+ * Computes the number of orthogonal connected components (islands) and total squares
+ * for each territory 0..(size - 1) on a board.
+ */
+export function analyzeTerritoryIslands(
+  regions: number[][],
+  size: number
+): { islandCounts: number[]; cellCounts: number[] } {
+  const islandCounts = new Array<number>(size).fill(0);
+  const cellCounts = new Array<number>(size).fill(0);
+  const visited = Array.from({ length: size }, () => new Array<boolean>(size).fill(false));
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const reg = regions[r][c];
+      if (reg >= 0 && reg < size) cellCounts[reg]++;
+      if (visited[r][c]) continue;
+      visited[r][c] = true;
+      if (reg >= 0 && reg < size) islandCounts[reg]++;
+
+      const queue: [number, number][] = [[r, c]];
+      for (let head = 0; head < queue.length; head++) {
+        const [cr, cc] = queue[head];
+        for (const [dr, dc] of [
+          [-1, 0],
+          [1, 0],
+          [0, -1],
+          [0, 1],
+        ]) {
+          const nr = cr + dr;
+          const nc = cc + dc;
+          if (nr >= 0 && nr < size && nc >= 0 && nc < size && !visited[nr][nc] && regions[nr][nc] === reg) {
+            visited[nr][nc] = true;
+            queue.push([nr, nc]);
+          }
+        }
+      }
+    }
+  }
+
+  return { islandCounts, cellCounts };
+}
+
+

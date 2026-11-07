@@ -23,13 +23,15 @@ test('board readability preferences persist and pattern maps load', async ({page
   await page.goto('./');
   await page.getByRole('button',{name:'Settings',exact:true}).tap();
   await page.getByLabel('Cell dividing lines').selectOption('white');
-  await page.getByLabel('Show region numbers').check();
+  await page.getByLabel('Territory texture patterns').uncheck();
   await page.getByRole('button',{name:'Close Settings'}).tap();
   await expect(page.locator('[data-cell]').first()).toHaveCSS('border-top-color','rgb(255, 255, 255)');
   await page.waitForTimeout(200);
   await page.reload();
   await expect(page.locator('[data-cell]').first()).toHaveCSS('border-top-color','rgb(255, 255, 255)');
-  await expect(page.locator('[data-cell]').first().locator('span')).toBeVisible();
+  await expect(page.getByTestId('territory-spotlight-bar')).toBeVisible();
+  await page.getByTestId('spotlight-chip-0').tap();
+  await expect(page.getByTestId('spotlight-clear')).toBeVisible();
   await page.getByRole('button',{name:'Free Play',exact:true}).tap();
   await page.getByRole('button',{name:'Heart',exact:true}).tap();
   await expect(page.locator('[data-cell]')).toHaveCount(81);
