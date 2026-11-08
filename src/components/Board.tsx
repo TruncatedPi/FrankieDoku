@@ -381,7 +381,7 @@ export const Board: React.FC<BoardProps> = ({
                   borderRightColor: lineColor,
                 }}
               >
-                {(isPrimaryHint || involved?.highlight) && <span aria-hidden="true" data-testid="hint-cell-outline" className="absolute inset-0 pointer-events-none z-30 rounded-sm" style={{ border: '3px solid #ffffff', boxShadow: 'inset 0 0 0 3px ' + (isConflictInvolved ? '#be123c' : '#0f172a') }} />}
+                {(isPrimaryHint || involved?.highlight) && <span aria-hidden="true" data-testid="hint-cell-outline" className="hint-cell-outline absolute inset-0 pointer-events-none z-30 rounded-sm" />}
                 {/* Placed Cat Sprite */}
                 {cell.state === 'cat' && (
                   <div
@@ -442,34 +442,12 @@ export const Board: React.FC<BoardProps> = ({
                   </div>
                 )}
 
-                {/* Faded Ghost X Mark (Hint preview) */}
+                {/* Translucent gold preview: distinct from the player's placed marks. */}
                 {showFadedMark && (
-                  <div className="w-[85%] h-[85%] flex items-center justify-center opacity-50 scale-85 pointer-events-none select-none">
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-full h-full drop-shadow-xs"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="18" y1="6" x2="6" y2="18" stroke="#ffffff" strokeWidth="5.5" />
-                      <line x1="6" y1="6" x2="18" y2="18" stroke="#ffffff" strokeWidth="5.5" />
-                      <line
-                        x1="18"
-                        y1="6"
-                        x2="6"
-                        y2="18"
-                        stroke={involved?.reason === 'starved_unit' || isConflictInvolved ? '#ef4444' : '#0f172a'}
-                        strokeWidth="3.2"
-                      />
-                      <line
-                        x1="6"
-                        y1="6"
-                        x2="18"
-                        y2="18"
-                        stroke={involved?.reason === 'starved_unit' || isConflictInvolved ? '#ef4444' : '#0f172a'}
-                        strokeWidth="3.2"
-                      />
+                  <div className="w-[85%] h-[85%] flex items-center justify-center pointer-events-none select-none">
+                    <svg data-testid="hint-proposed-x" viewBox="0 0 24 24" className="w-full h-full" aria-hidden="true">
+                      <path d="M6 3 L12 9 L18 3 L21 6 L15 12 L21 18 L18 21 L12 15 L6 21 L3 18 L9 12 L3 6 Z"
+                        fill="#fbbf24" fillOpacity="0.6" stroke="#171717" strokeWidth="0.8" strokeLinejoin="round" />
                     </svg>
                   </div>
                 )}

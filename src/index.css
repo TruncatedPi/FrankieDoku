@@ -52,3 +52,17 @@
     scrollbar-width: none;
   }
 }
+
+/* Keep the cell fully visible; only the gold hint frame pulses. Both dark
+   edges sit inside the cell, so white dividers cannot wash out the frame. */
+.hint-cell-outline {
+  border: 4px solid #fbbf24;
+  box-shadow: inset 0 0 0 1px #171717;
+  outline: 1px solid #171717;
+  outline-offset: -1px;
+  animation: hint-gold-pulse 1.6s ease-in-out infinite;
+}
+@keyframes hint-gold-pulse {
+  0%, 100% { border-color: #fbbf24; opacity: 1; }
+  50% { border-color: #f59e0b; opacity: 0.72; }
+}

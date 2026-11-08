@@ -177,7 +177,7 @@ test('hint overlays menu area without jumping the board and displays logical ste
   await page.mouse.move(grip.x + 80, grip.y + 90, {steps:5});
   await page.mouse.up();
   await expect.poll(async () => (await explanation.boundingBox())!.y).toBeGreaterThan(start.y + 40);
-  await expect(page.getByTestId('hint-cell-outline').first()).toHaveCSS('border-top-width', '3px');
+  await expect(page.getByTestId('hint-cell-outline').first()).toHaveCSS('border-top-width', '4px');
   await handle.focus();
   await page.keyboard.press('Escape');
   await expect(explanation).toHaveCount(0);
@@ -364,4 +364,24 @@ test('dark mode can be toggled independently on any color palette', async ({ pag
   // Switch to Dark Mode on Twilight Neon
   await settingsModal.getByRole('button', { name: 'Dark', exact: true }).click();
   await expect(page.locator('html')).toHaveClass(/dark/);
+});
+
+test('gold hint frame and translucent preview remain distinct with white dividers', async ({page}) => {
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.goto('./');
+  await page.getByRole('button', {name:'Settings',exact:true}).click();
+  await page.getByLabel('Cell dividing lines').selectOption('white');
+  await page.getByRole('button', {name:'Close Settings'}).click();
+  await page.getByRole('button', {name:'Hint',exact:true}).click();
+  const frame = page.getByTestId('hint-cell-outline').first();
+  await expect(frame).toHaveCSS('border-top-width','4px');
+  await expect(frame).toHaveCSS('outline-color','rgb(23, 23, 23)');
+  await expect(frame).toHaveCSS('animation-name','hint-gold-pulse');
+  await expect(frame).toHaveCSS('animation-duration','1.6s');
+  const x = page.getByTestId('hint-proposed-x').first().locator('path');
+  await expect(x).toHaveAttribute('fill','#fbbf24');
+  await expect(x).toHaveAttribute('fill-opacity','0.6');
+  await expect(x).toHaveAttribute('stroke','#171717');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await expect(frame).toHaveCSS('animation-iteration-count','1');
 });
