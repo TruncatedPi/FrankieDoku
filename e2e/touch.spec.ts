@@ -37,3 +37,32 @@ test('board readability preferences persist and pattern maps load', async ({page
   await expect(page.locator('[data-cell]')).toHaveCount(81);
   await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('meowdoku_saved_session_v2')||'{}').puzzle?.id)).toBe('pattern-heart');
 });
+
+test('hint explanation is readable and movable on a phone', async ({page, browserName}) => {
+  await page.goto('./');
+  const chips = page.locator('[data-testid^="spotlight-chip-"]');
+  const textures = await chips.evaluateAll(nodes => nodes.map(n => getComputedStyle(n).backgroundImage !== 'none'));
+  expect(textures.filter(Boolean).length).toBe(Math.floor(textures.length / 2));
+  await page.getByRole('button', {name:'Hint', exact:true}).tap();
+  await page.getByText('Why?', {exact:true}).tap();
+  const dialog = page.getByRole('dialog', {name:'Why this hint?'});
+  await expect(dialog.locator('ol, p').first()).toHaveCSS('font-size','18px');
+  const handle = dialog.getByRole('button', {name:'Move hint explanation'});
+  const box = (await handle.boundingBox())!;
+  if (browserName === 'chromium') {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchStart', touchPoints:[{x:box.x+20,y:box.y+20}]});
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchMove', touchPoints:[{x:box.x+20,y:box.y+100}]});
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchEnd', touchPoints:[]});
+  } else {
+    // Synthetic WebKit pointer events have no active native pointer to capture.
+    await handle.evaluate(node => { node.setPointerCapture = () => {}; });
+    await handle.dispatchEvent('pointerdown', {pointerId:9, pointerType:'touch', isPrimary:true, button:0, clientX:box.x+20, clientY:box.y+20});
+    await handle.dispatchEvent('pointermove', {pointerId:9, pointerType:'touch', isPrimary:true, clientX:box.x+20, clientY:box.y+100});
+    await handle.dispatchEvent('pointerup', {pointerId:9, pointerType:'touch', isPrimary:true});
+  }
+  await expect.poll(async () => (await dialog.boundingBox())!.y).toBeGreaterThan(100);
+  await dialog.getByRole('button', {name:'Close explanation'}).tap();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByTestId('hint-overlay')).toBeVisible();
+});

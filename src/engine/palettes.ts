@@ -508,3 +508,20 @@ export function analyzeTerritoryIslands(
 }
 
 
+
+/** Pair the closest remaining colors; texture one of each pair, leaving the other solid. */
+export function selectTexturedRegions(colors: string[]): Set<number> {
+  const labs = colors.map(hexToLab);
+  const pairs: { a: number; b: number; distance: number }[] = [];
+  for (let a = 0; a < labs.length; a++) for (let b = a + 1; b < labs.length; b++) {
+    pairs.push({ a, b, distance: deltaE2000(labs[a], labs[b]) });
+  }
+  pairs.sort((a, b) => a.distance - b.distance || a.a - b.a || a.b - b.b);
+  const used = new Set<number>();
+  const textured = new Set<number>();
+  for (const { a, b } of pairs) {
+    if (used.has(a) || used.has(b)) continue;
+    used.add(a); used.add(b); textured.add(b);
+  }
+  return textured;
+}

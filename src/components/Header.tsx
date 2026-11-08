@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { HintWindow } from './HintWindow';
 import { GameMode, PlayStyle, CatBreed, HintResult, ThemePalette } from '../engine/types';
 import { getTerritoryInfo } from '../engine/palettes';
 import { Volume2, VolumeX, Settings, Heart, Calendar, Grid, Download, Users, RefreshCw, Sparkles, X, Moon, Sun } from 'lucide-react';
@@ -93,6 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeHint,
   onDismissHint,
 }) => {
+  const [explanationHint, setExplanationHint] = useState<HintResult | null>(null);
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const rem = secs % 60;
@@ -310,12 +312,14 @@ export const Header: React.FC<HeaderProps> = ({
                   <p className="text-base font-bold text-slate-950 dark:text-white leading-snug">
                     {activeHint.explanation.includes("doesn't belong here") ? 'Remove this cat.' : activeHint.type === 'placement' ? 'Place a cat here.' : 'Mark this square with an X.'}
                   </p>
-                  <details key={activeHint.explanation} className="mt-1 text-sm text-slate-900 dark:text-slate-100 leading-relaxed">
-                    <summary className="cursor-pointer font-semibold"><span className="underline underline-offset-2">Why?</span> <span className="font-normal">Row {activeHint.row + 1}, column {activeHint.col + 1}</span></summary>
-                    {activeHint.steps?.length ? <ol className="mt-2 space-y-2 pl-5 list-decimal">
-                      {activeHint.steps.map((step,idx) => <li key={idx}><FormattedHintText text={step} theme={theme} /></li>)}
-                    </ol> : <p className="mt-2"><FormattedHintText text={activeHint.explanation} theme={theme} /></p>}
-                  </details>
+                  <button type="button" onClick={() => setExplanationHint(activeHint)} className="mt-1 text-sm text-slate-950 dark:text-white">
+                    <span className="font-bold underline underline-offset-2">Why?</span> Row {activeHint.row + 1}, column {activeHint.col + 1}
+                  </button>
+                  {explanationHint === activeHint && <HintWindow onClose={() => setExplanationHint(null)}>
+                    {activeHint.steps?.length ? <ol className="space-y-4 pl-5 list-decimal">
+                      {activeHint.steps.map((step, idx) => <li key={idx}><FormattedHintText text={step} theme={theme} /></li>)}
+                    </ol> : <p><FormattedHintText text={activeHint.explanation} theme={theme} /></p>}
+                  </HintWindow>}
                 </div>
               </div>
               <button

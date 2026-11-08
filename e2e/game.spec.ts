@@ -164,9 +164,24 @@ test('hint overlays menu area without jumping the board and displays logical ste
   await expect(hintOverlay).toBeVisible();
   await expect(hintOverlay.locator("p").first()).toHaveText(/^(Mark this square with an X\.|Place a cat here\.|Remove this cat\.)$/);
   await expect(hintOverlay.locator("p").first()).toHaveCSS("font-size", "16px");
-  await expect(hintOverlay.locator("details")).not.toHaveAttribute("open", "");
+  await expect(page.getByRole("dialog", {name:"Why this hint?"})).toHaveCount(0);
   await hintOverlay.getByText("Why?", {exact:true}).click();
-  await expect(hintOverlay.locator("details")).toHaveAttribute("open", "");
+  const explanation = page.getByRole('dialog', {name:'Why this hint?'});
+  await expect(explanation).toBeVisible();
+  await expect(explanation.locator('ol, p').first()).toHaveCSS('font-size', '18px');
+  const start = (await explanation.boundingBox())!;
+  const handle = explanation.getByRole('button', {name:'Move hint explanation'});
+  const grip = (await handle.boundingBox())!;
+  await page.mouse.move(grip.x + 20, grip.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(grip.x + 80, grip.y + 90, {steps:5});
+  await page.mouse.up();
+  await expect.poll(async () => (await explanation.boundingBox())!.y).toBeGreaterThan(start.y + 40);
+  await expect(page.getByTestId('hint-cell-outline').first()).toHaveCSS('border-top-width', '3px');
+  await handle.focus();
+  await page.keyboard.press('Escape');
+  await expect(explanation).toHaveCount(0);
+  await hintOverlay.getByText('Why?', {exact:true}).click();
 
   // The board's vertical position relative to the document must NOT jump down (within subpixel rendering tolerance)
   const boxAfter = (await board.boundingBox())!;

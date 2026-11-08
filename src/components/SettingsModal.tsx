@@ -321,7 +321,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <label className="flex justify-between items-center text-sm font-medium text-slate-700 dark:text-slate-200">Territory texture patterns
               <input type="checkbox" aria-label="Territory texture patterns" checked={settings.territoryPatterns} onChange={e => onUpdateSettings({territoryPatterns: e.target.checked})} className="w-4 h-4 accent-amber-500 rounded" />
             </label>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Layers subtle geometric textures and sculpted borders on each territory. Tap any swatch below the board to spotlight all islands of a territory.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Textures one of each similar-color pair, leaving about half the territories solid. Tap any swatch below the board to spotlight all islands of a territory.</p>
           </section>
           {/* Theme Palette */}
           <div className="space-y-2">

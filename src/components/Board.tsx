@@ -6,6 +6,7 @@ import {
   REGION_PALETTES,
   REGION_COLOR_NAMES,
   getTerritoryPatternImage,
+  selectTexturedRegions,
   analyzeTerritoryIslands,
 } from '../engine/palettes';
 import { recordBoardPrimaryPointerDown } from '../utils/interactionGuard';
@@ -53,6 +54,7 @@ export const Board: React.FC<BoardProps> = ({
   const size = puzzle.size;
   const palette = REGION_PALETTES[theme] || REGION_PALETTES.cozy;
   const colorNames = REGION_COLOR_NAMES[theme] || REGION_COLOR_NAMES.cozy;
+  const texturedRegions = useMemo(() => selectTexturedRegions(palette.slice(0, size)), [palette, size]);
   const isLargeGrid = size >= 9;
   const regionBorderWidth = isLargeGrid ? '2px' : '2.75px';
 
@@ -272,7 +274,7 @@ export const Board: React.FC<BoardProps> = ({
           {cells.map((cell) => {
             const reg = cell.region;
             const bgCol = palette[reg % palette.length];
-            const patternImage = territoryPatterns ? getTerritoryPatternImage(reg) : undefined;
+            const patternImage = territoryPatterns && texturedRegions.has(reg) ? getTerritoryPatternImage(reg) : undefined;
             const isDisjointTerritory = (islandCounts[reg] ?? 1) > 1;
             const isSpotlightTarget = spotlightRegion === reg;
             const isSpotlightDimmed = spotlightRegion !== null && spotlightRegion !== reg;
@@ -347,7 +349,7 @@ export const Board: React.FC<BoardProps> = ({
                     : ''
                 } ${
                   isPrimaryHint
-                    ? 'ring-4 ring-amber-400 animate-pulse z-20 rounded-lg shadow-lg'
+                    ? 'z-20 rounded-lg'
                     : involved?.highlight
                     ? isConflictInvolved
                       ? 'ring-2 ring-rose-500 bg-rose-400/30 z-10 rounded-lg'
@@ -379,6 +381,7 @@ export const Board: React.FC<BoardProps> = ({
                   borderRightColor: lineColor,
                 }}
               >
+                {(isPrimaryHint || involved?.highlight) && <span aria-hidden="true" data-testid="hint-cell-outline" className="absolute inset-0 pointer-events-none z-30 rounded-sm" style={{ border: '3px solid #ffffff', boxShadow: 'inset 0 0 0 3px ' + (isConflictInvolved ? '#be123c' : '#0f172a') }} />}
                 {/* Placed Cat Sprite */}
                 {cell.state === 'cat' && (
                   <div
@@ -502,7 +505,7 @@ export const Board: React.FC<BoardProps> = ({
         >
           {Array.from({ length: size }, (_, reg) => {
             const bgCol = palette[reg % palette.length];
-            const patternImg = territoryPatterns ? getTerritoryPatternImage(reg) : undefined;
+            const patternImg = territoryPatterns && texturedRegions.has(reg) ? getTerritoryPatternImage(reg) : undefined;
             const name = colorNames[reg % colorNames.length];
             const islands = islandCounts[reg] ?? 1;
             const squares = cellCounts[reg] ?? 0;

@@ -9,7 +9,7 @@ import {
   generateHint,
 } from './solver';
 import { countDisjointRegions, generateDailyPuzzle, generatePuzzle } from './generator';
-import { analyzeTerritoryIslands, getTerritoryPatternImage } from './palettes';
+import { analyzeTerritoryIslands, getTerritoryPatternImage, selectTexturedRegions, REGION_PALETTES } from './palettes';
 import { CAMPAIGN_LEVELS, CAMPAIGNS, LEVELS_PER_CAMPAIGN } from '../data/levels';
 import { BoardCell, Puzzle } from './types';
 
@@ -118,4 +118,17 @@ describe('Meowdoku Engine & Rules', () => {
       assert.ok(getTerritoryPatternImage(reg)?.startsWith('url("data:image/svg+xml,'));
     }
   });
+});
+
+test('textures split similar color pairs and leave half the regions solid', () => {
+  for (const palette of Object.values(REGION_PALETTES)) {
+    for (let size = 4; size <= 12; size++) {
+      const selected = selectTexturedRegions(palette.slice(0, size));
+      assert.equal(selected.size, Math.floor(size / 2));
+      assert.deepEqual(selected, selectTexturedRegions(palette.slice(0, size)));
+    }
+  }
+  const selected = selectTexturedRegions(['#ff0000', '#00ff00', '#ff0001', '#00ff01']);
+  assert.notEqual(selected.has(0), selected.has(2));
+  assert.notEqual(selected.has(1), selected.has(3));
 });
