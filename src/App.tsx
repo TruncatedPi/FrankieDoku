@@ -14,7 +14,7 @@ import { CatBreed } from './engine/types';
 import { RotateCcw, HeartOff, Users } from 'lucide-react';
 import { CatIcon } from './components/CatIcon';
 import { FreePlayModal } from './components/FreePlayModal';
-import { getLevelDifficultyInfo } from './engine/difficulty';
+import { getLevelDifficultyInfo, getPuzzleDifficultyInfo } from './engine/difficulty';
 import { countDisjointRegions } from './engine/generator';
 
 export function App() {
@@ -112,8 +112,20 @@ export function App() {
         playStyle={settings.playStyle}
         levelNumber={currentLevel?.levelNumber}
         levelName={currentLevel?.name}
-        isHardLevel={gameMode === 'campaign' && currentLevel ? Boolean(getLevelDifficultyInfo(currentLevel.id)?.isHard) : false}
-        isSuperHardLevel={gameMode === 'campaign' && currentLevel ? Boolean(getLevelDifficultyInfo(currentLevel.id)?.isSuperHard) : false}
+        isHardLevel={
+          gameMode === 'campaign' && currentLevel
+            ? Boolean(getLevelDifficultyInfo(currentLevel.id)?.isHard)
+            : gameMode === 'freeplay'
+              ? getPuzzleDifficultyInfo(currentPuzzle).isHard
+              : false
+        }
+        isSuperHardLevel={
+          gameMode === 'campaign' && currentLevel
+            ? Boolean(getLevelDifficultyInfo(currentLevel.id)?.isSuperHard)
+            : gameMode === 'freeplay'
+              ? getPuzzleDifficultyInfo(currentPuzzle).isSuperHard
+              : false
+        }
         gridSize={currentPuzzle.size}
         hearts={hearts}
         maxHearts={maxHearts}

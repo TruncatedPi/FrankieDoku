@@ -534,7 +534,18 @@ const campaignSizeCache = new Map<string, CampaignSizeDifficultyStats>();
 const baselineSizeCache = new Map<
   number,
   { averageScore: number; stdDev: number; trimmedMean: number }
->();
+>([
+  [4, { averageScore: 12.28, stdDev: 3.9011214947261394, trimmedMean: 12.28 }],
+  [5, { averageScore: 17.48, stdDev: 8.604222871159404, trimmedMean: 17.48 }],
+  [6, { averageScore: 33.425, stdDev: 20.78430688040914, trimmedMean: 28.257142857142856 }],
+  [7, { averageScore: 37.91428571428571, stdDev: 23.429491543517727, trimmedMean: 29.96666666666666 }],
+  [8, { averageScore: 42.044444444444444, stdDev: 29.005333531319856, trimmedMean: 36.635294117647064 }],
+  [9, { averageScore: 47.56470588235294, stdDev: 33.990512908797925, trimmedMean: 40.4125 }],
+  [10, { averageScore: 58.720000000000006, stdDev: 51.48301322823247, trimmedMean: 49.305263157894736 }],
+  [11, { averageScore: 77.03999999999999, stdDev: 67.30852814439152, trimmedMean: 56.511111111111106 }],
+  [12, { averageScore: 99.24, stdDev: 101.39545538161074, trimmedMean: 69.62222222222222 }],
+]);
+const puzzleDifficultyCache = new WeakMap<Puzzle, LevelDifficultyInfo>();
 
 function getBaselineSizeBenchmark(size: number): {
   averageScore: number;
@@ -696,4 +707,64 @@ export function getLevelDifficultyInfo(levelId: string): LevelDifficultyInfo | n
   if (!level) return null;
   const stats = getCampaignSizeDifficultyStats(campaign.id, level.size);
   return stats?.byLevelId.get(levelId) ?? null;
+}
+
+/**
+ * Evaluates difficulty info (including `isHard` and `isSuperHard`) for any puzzle,
+ * including Free Play generated maps and pattern maps.
+ */
+export function getPuzzleDifficultyInfo(puzzle: Puzzle): LevelDifficultyInfo {
+  const campaignInfo = getLevelDifficultyInfo(puzzle.id);
+  if (campaignInfo) return campaignInfo;
+
+  const cached = puzzleDifficultyCache.get(puzzle);
+  if (cached) return cached;
+
+  const metrics = analyzePuzzleDifficulty(puzzle);
+  const size = puzzle.size;
+  const baseline = getBaselineSizeBenchmark(size);
+  const refAvg = baseline.averageScore;
+  const refStdDev = baseline.stdDev;
+  const refTrimmed = baseline.trimmedMean;
+
+  const hardThreshold = Math.ceil(
+    Math.max(refAvg * 1.35, refAvg + 12, Math.min(refAvg + 0.75 * refStdDev, refAvg * 1.75))
+  );
+  const superHardThreshold = Math.ceil(
+    Math.max(hardThreshold + 25, refAvg * 2.25, refAvg + 1.75 * refStdDev, refAvg + 40)
+  );
+
+  const score = metrics.difficultyScore;
+  const ratioToAverage = refAvg > 0 ? score / refAvg : 1;
+  const zScore = refStdDev > 0 ? (score - refAvg) / refStdDev : 0;
+
+  const isHard =
+    score > refAvg &&
+    ((score >= refAvg * 1.35 &&
+      score - refAvg >= 12 &&
+      (score >= refAvg + 0.75 * refStdDev || score >= refAvg * 1.75)) ||
+      (score >= refTrimmed * 1.85 &&
+        score - refTrimmed >= 25 &&
+        metrics.branchingLookaheadSteps > 0));
+
+  const info: LevelDifficultyInfo = {
+    levelId: puzzle.id,
+    levelNumber: 0,
+    campaignNumber: 0,
+    size,
+    score,
+    averageForSize: refAvg,
+    referenceAverageForSize: refAvg,
+    hardThresholdForSize: hardThreshold,
+    stdDevForSize: refStdDev,
+    ratioToAverage,
+    zScore,
+    isHard,
+    superHardThresholdForSize: superHardThreshold,
+    isSuperHard: isHard && metrics.branchingLookaheadSteps >= 3 && score >= superHardThreshold,
+    metrics,
+  };
+
+  puzzleDifficultyCache.set(puzzle, info);
+  return info;
 }

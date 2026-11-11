@@ -421,4 +421,63 @@ test('header badge displays HARD for hard campaign levels and adapts SUPER-HARD 
   } finally {
     await superPage.close();
   }
+
+  // Free Play maps with high difficulty scores receive HARD or SUPER-HARD tags
+  const freePlayHard = generatePuzzle(9, 104, 60, 3);
+  const freePlaySuperHard = generatePuzzle(9, 101, 60, 0);
+  const fpHardPage = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  try {
+    await fpHardPage.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(freePlayHard, 'freeplay'));
+    await fpHardPage.goto('./');
+    await expect(fpHardPage.getByTestId('header-hard-badge')).toHaveText('HARD');
+  } finally {
+    await fpHardPage.close();
+  }
+
+  const fpSuperPage = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  try {
+    await fpSuperPage.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(freePlaySuperHard, 'freeplay'));
+    await fpSuperPage.goto('./');
+    await expect(fpSuperPage.getByTestId('header-hard-badge')).toHaveText('SUPER-HARD');
+    await fpSuperPage.setViewportSize({ width: 320, height: 640 });
+    await expect(fpSuperPage.getByTestId('header-hard-badge')).toHaveText('SUPER');
+  } finally {
+    await fpSuperPage.close();
+  }
+});
+
+test('floating hint explanation becomes translucent while dragging, moves up to 50% off-screen, and omits repetitive conclusion step', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /hint/i }).click();
+  await page.locator('[data-testid="hint-overlay"]').getByText('Why?', { exact: true }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Why this hint?' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute('data-moving', 'false');
+  await expect(dialog).toHaveCSS('opacity', '1');
+
+  // Verify no step contains a repetitive "Conclusion:" line
+  const stepsText = await dialog.locator('li').allInnerTexts();
+  expect(stepsText.length).toBeGreaterThanOrEqual(2);
+  expect(stepsText.some(s => /conclusion/i.test(s))).toBe(false);
+
+  // Start dragging handle far to the left so the dialog clamps at 50% off-screen (-width / 2)
+  const handle = dialog.getByRole('button', { name: 'Move hint explanation' });
+  const grip = (await handle.boundingBox())!;
+  const dialogBox = (await dialog.boundingBox())!;
+
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(2, grip.y + grip.height / 2, { steps: 5 });
+
+  await expect(dialog).toHaveAttribute('data-moving', 'true');
+  await expect(dialog).toHaveCSS('opacity', '0.5');
+
+  const movedBox = (await dialog.boundingBox())!;
+  expect(movedBox.x).toBeLessThan(0);
+  expect(movedBox.x).toBeGreaterThanOrEqual(-Math.ceil(dialogBox.width * 0.5) - 2);
+
+  await page.mouse.up();
+  await expect(dialog).toHaveAttribute('data-moving', 'false');
+  await expect(dialog).toHaveCSS('opacity', '1');
 });

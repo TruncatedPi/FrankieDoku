@@ -316,8 +316,8 @@ describe('Puzzle Integrity & Contradiction Verification', () => {
       );
       assert.ok(hint.steps && hint.steps.length >= 2, `Level ${level.levelNumber} hint must have at least 2 deductive steps`);
       assert.ok(
-        hint.steps.some((s) => s.includes('Conclusion')),
-        `Level ${level.levelNumber} steps must include a conclusion`
+        !hint.steps.some((s) => s.includes('Conclusion')),
+        `Level ${level.levelNumber} steps must not include a repetitive conclusion`
       );
     }
   });

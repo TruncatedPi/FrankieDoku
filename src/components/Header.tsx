@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
   );
 
   useEffect(() => {
-    if (!(gameMode === 'campaign' && isSuperHardLevel)) {
+    if (!((gameMode === 'campaign' || gameMode === 'freeplay') && isSuperHardLevel)) {
       setCompactSuperBadge(false);
       return;
     }
@@ -149,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
       observer?.disconnect();
       window.removeEventListener('resize', measureRoom);
     };
-  }, [gameMode, isSuperHardLevel, playStyle, levelNumber, levelName]);
+  }, [gameMode, isSuperHardLevel, playStyle, levelNumber, levelName, gridSize]);
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const rem = secs % 60;
@@ -314,7 +314,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span ref={modeTitleRef} className="font-bold text-slate-800 dark:text-slate-100 truncate max-w-[160px]">
                 {getModeTitle()}
               </span>
-              {gameMode === 'campaign' && (isHardLevel || isSuperHardLevel) && (
+              {(gameMode === 'campaign' || gameMode === 'freeplay') && (isHardLevel || isSuperHardLevel) && (
                 <span
                   data-testid="header-hard-badge"
                   title={

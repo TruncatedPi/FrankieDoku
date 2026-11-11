@@ -4,7 +4,9 @@ import {
   analyzePuzzleDifficulty,
   getCampaignSizeDifficultyStats,
   getLevelDifficultyInfo,
+  getPuzzleDifficultyInfo,
 } from './difficulty';
+import { generatePuzzle } from './generator';
 import { CAMPAIGNS, CAMPAIGN_LEVELS } from '../data/levels';
 
 describe('Algorithmic Difficulty Scoring & Campaign Size Benchmarks', () => {
@@ -84,4 +86,13 @@ describe('Algorithmic Difficulty Scoring & Campaign Size Benchmarks', () => {
  let count=0;
  for(const level of CAMPAIGN_LEVELS){const info=getLevelDifficultyInfo(level.id)!;if(info.isSuperHard){count++;assert.ok(info.isHard);assert.ok(info.score>=info.superHardThresholdForSize);}}
  assert.ok(count>0 && count<CAMPAIGN_LEVELS.length/4);
+
+ const normalFreePlay = getPuzzleDifficultyInfo(generatePuzzle(9, 202, 60, 0));
+ const hardFreePlay = getPuzzleDifficultyInfo(generatePuzzle(9, 104, 60, 3));
+ const superHardFreePlay = getPuzzleDifficultyInfo(generatePuzzle(9, 101, 60, 0));
+ assert.strictEqual(normalFreePlay.isHard, false);
+ assert.strictEqual(hardFreePlay.isHard, true);
+ assert.strictEqual(hardFreePlay.isSuperHard, false);
+ assert.strictEqual(superHardFreePlay.isHard, true);
+ assert.strictEqual(superHardFreePlay.isSuperHard, true);
  });

@@ -268,7 +268,6 @@ function findLineRegionReduction(
             `In ${formatTerritoryTag(reg, theme)}, all remaining open squares lie exclusively in Row ${firstRow + 1}.`,
             `Because ${formatTerritoryTag(reg, theme)} must contain a cat, that cat must be placed in Row ${firstRow + 1}.`,
             `Therefore, no other square in Row ${firstRow + 1} outside ${formatTerritoryTag(reg, theme)} can contain a cat.`,
-            `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
           ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -291,7 +290,6 @@ function findLineRegionReduction(
             `In ${formatTerritoryTag(reg, theme)}, all remaining open squares lie exclusively in Column ${firstCol + 1}.`,
             `Because ${formatTerritoryTag(reg, theme)} must contain a cat, that cat must be placed in Column ${firstCol + 1}.`,
             `Therefore, no other square in Column ${firstCol + 1} outside ${formatTerritoryTag(reg, theme)} can contain a cat.`,
-            `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
           ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -321,7 +319,6 @@ function findLineRegionReduction(
             `In Row ${r + 1}, all remaining open squares lie exclusively within ${formatTerritoryTag(firstReg, theme)}.`,
             `Because Row ${r + 1} must contain a cat, that cat will be located in ${formatTerritoryTag(firstReg, theme)}.`,
             `Therefore, no other square in ${formatTerritoryTag(firstReg, theme)} outside Row ${r + 1} can contain a cat.`,
-            `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
           ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -350,7 +347,6 @@ function findLineRegionReduction(
             `In Column ${c + 1}, all remaining open squares lie exclusively within ${formatTerritoryTag(firstReg, theme)}.`,
             `Because Column ${c + 1} must contain a cat, that cat will be located in ${formatTerritoryTag(firstReg, theme)}.`,
             `Therefore, no other square in ${formatTerritoryTag(firstReg, theme)} outside Column ${c + 1} can contain a cat.`,
-            `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
           ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -446,7 +442,6 @@ function findSubsetParityReduction(
               `These rows fully contain ${openRows} entire territories: ${containedTerritories.map((t) => formatTerritoryTag(t, theme)).join(', ')}.`,
               `Because each of these ${openRows} territories requires a cat, they consume all ${openRows} cats available in ${rowLongDesc}.`,
               `Therefore, no other territory (such as ${formatTerritoryTag(targetReg, theme)}) can place a cat in ${rowLongDesc}.`,
-              `Conclusion: Mark ${cellName(target.row, target.col)} in ${formatTerritoryTag(targetReg, theme)} with an ❌!`,
             ],
             involvedCells: [
               ...targetRegElim.map((c) => ({
@@ -527,7 +522,6 @@ function findSubsetParityReduction(
               `These columns fully contain ${openCols} entire territories: ${containedTerritories.map((t) => formatTerritoryTag(t, theme)).join(', ')}.`,
               `Because each of these ${openCols} territories requires a cat, they consume all ${openCols} cats available in ${colLongDesc}.`,
               `Therefore, no other territory (such as ${formatTerritoryTag(targetReg, theme)}) can place a cat in ${colLongDesc}.`,
-              `Conclusion: Mark ${cellName(target.row, target.col)} in ${formatTerritoryTag(targetReg, theme)} with an ❌!`,
             ],
             involvedCells: [
               ...targetRegElim.map((item) => ({
@@ -585,7 +579,6 @@ function findSubsetParityReduction(
               `${rowLongDesc} (${openRows} rows) only contain squares from ${coveringTerritories.map((t) => formatTerritoryTag(t, theme)).join(', ')}.`,
               `Because these ${openRows} rows require ${openRows} cats, each of those territories must place its cat within ${rowLongDesc}.`,
               `Therefore, squares for ${formatTerritoryTag(targetReg, theme)} outside ${rowLongDesc} cannot contain a cat.`,
-              `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
             ],
             involvedCells: [
               { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -632,7 +625,6 @@ function findSubsetParityReduction(
               `${colLongDesc} (${openCols} columns) only contain squares from ${coveringTerritories.map((t) => formatTerritoryTag(t, theme)).join(', ')}.`,
               `Because these ${openCols} columns require ${openCols} cats, each of those territories must place its cat within ${colLongDesc}.`,
               `Therefore, squares for ${formatTerritoryTag(targetReg, theme)} outside ${colLongDesc} cannot contain a cat.`,
-              `Conclusion: Mark ${cellName(target.row, target.col)} with an ❌!`,
             ],
             involvedCells: [
               { row: target.row, col: target.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -844,7 +836,6 @@ function evaluateCellContradiction(
             `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}).`,
             `That cat eliminates all remaining open spots in Row ${r + 1} (${wiped.map((w) => shortCoord(w.row, w.col)).join(', ')}).`,
             `Every row must contain exactly one cat, so leaving Row ${r + 1} with 0 valid squares is impossible.`,
-            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot contain a cat. Mark it with an ❌!`,
           ],
           involvedCells: [
             { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -873,7 +864,6 @@ function evaluateCellContradiction(
             `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}).`,
             `That cat eliminates all remaining open spots in Column ${c + 1} (${wiped.map((w) => shortCoord(w.row, w.col)).join(', ')}).`,
             `Every column must contain exactly one cat, so leaving Column ${c + 1} with 0 valid squares is impossible.`,
-            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot contain a cat. Mark it with an ❌!`,
           ],
           involvedCells: [
             { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -904,7 +894,6 @@ function evaluateCellContradiction(
             `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}).`,
             `That cat eliminates all remaining open spots in ${formatTerritoryTag(reg, theme)}.`,
             `Every territory must contain exactly one cat, so leaving ${formatTerritoryTag(reg, theme)} with 0 valid squares is impossible.`,
-            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot contain a cat. Mark it with an ❌!`,
           ],
           involvedCells: [
             { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -931,7 +920,6 @@ function evaluateCellContradiction(
           `Suppose a cat is placed on ${sc} (${cellName(cell.row, cell.col)}) of ${formatTerritoryTag(cellReg, theme)}.`,
           `This ${immShared.summary}.`,
           `Because a single unit can only contain one cat, ${immShared.targetUnitDesc} cannot both be satisfied.`,
-          `Conclusion: ${sc} (${cellName(cell.row, cell.col)}) cannot be a cat — mark it with an ❌!`,
         ],
         involvedCells: [
           { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -976,7 +964,6 @@ function evaluateCellContradiction(
             `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}) in ${formatTerritoryTag(cellReg, theme)}.`,
             `In ${unitDesc}, this leaves only ${cellName(forced.row, forced.col)} (${fsc}) open, forcing a cat there.`,
             `Placing that forced cat ${imm.summary}!`,
-            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot be a cat — mark it with an ❌!`,
           ],
           involvedCells: [
             { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -1053,7 +1040,6 @@ function evaluateCellContradiction(
             `Suppose a cat is placed on ${groupCoords} in ${formatTerritoryTag(cellReg, theme)}.`,
             `This only allows for a cat in ${unitDesc} for either ${optDesc}.`,
             ...optionSteps,
-            `Conclusion: ${sc} (${cellName(cell.row, cell.col)}) cannot be a cat — mark it with an ❌!`,
           ],
           involvedCells: [
             ...siblings.map((s) => ({
@@ -1108,7 +1094,6 @@ function evaluateCellContradiction(
             `Suppose a cat is placed at ${cellName(cell.row, cell.col)} (${sc}) of ${formatTerritoryTag(cellReg, theme)}.`,
             ...chainSteps,
             `This ${immediate.summary}, which is impossible.`,
-            `Conclusion: ${cellName(cell.row, cell.col)} (${sc}) cannot be a cat — mark it with an ❌!`,
           ],
           involvedCells: chainInvolved,
         },
@@ -1189,7 +1174,6 @@ function evaluateCellContradiction(
                 ...chainSteps,
                 `This only allows for a cat in ${formatTerritoryTag(reg, theme)} for either ${optCoords}.`,
                 ...optionReasons,
-                `Conclusion: ${sc} cannot contain a cat — mark it with an ❌!`,
               ],
               involvedCells: chainInvolved,
             },
@@ -1288,7 +1272,6 @@ export function generateHint(
           steps: [
             `The cat at ${cellName(cell.row, cell.col)} conflicts with the cat at ${cellName(conflictingCat.row, conflictingCat.col)} (${relation}).`,
             `Cats cannot share the same row, column, or territory, nor touch even diagonally.`,
-            `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
           ],
           involvedCells: [
             { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
@@ -1315,7 +1298,6 @@ export function generateHint(
             steps: [
               `The cat placed at ${cellName(cell.row, cell.col)} eliminates all open squares in Row ${r + 1}.`,
               `Row ${r + 1} must contain exactly one cat, but now has 0 valid squares available.`,
-              `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
             ],
             involvedCells: [
               { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
@@ -1342,7 +1324,6 @@ export function generateHint(
             steps: [
               `The cat placed at ${cellName(cell.row, cell.col)} eliminates all open squares in Column ${c + 1}.`,
               `Column ${c + 1} must contain exactly one cat, but now has 0 valid squares available.`,
-              `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
             ],
             involvedCells: [
               { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
@@ -1369,7 +1350,6 @@ export function generateHint(
             steps: [
               `The cat placed at ${cellName(cell.row, cell.col)} eliminates all open squares in ${formatTerritoryTag(reg, theme)}.`,
               `${formatTerritoryTag(reg, theme)} must contain exactly one cat, but now has 0 valid squares available.`,
-              `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
             ],
             involvedCells: [
               { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
@@ -1389,7 +1369,6 @@ export function generateHint(
         steps: [
           `The cat at ${cellName(cell.row, cell.col)} prevents the rest of the board from completing cleanly.`,
           `Every row, column, and territory requires a unique solution.`,
-          `Conclusion: Remove the cat at ${cellName(cell.row, cell.col)} to clear the contradiction.`,
         ],
         involvedCells: [
           { row: cell.row, col: cell.col, highlight: true, reason: 'conflict' },
@@ -1415,7 +1394,6 @@ export function generateHint(
         steps: [
           `The square at ${cellName(sol.row, sol.col)} was marked with an ❌ by mistake.`,
           `Without this square, ${formatTerritoryTag(reg, theme)} has no remaining valid squares that complete the puzzle.`,
-          `Conclusion: Clear the ❌ at ${cellName(sol.row, sol.col)} — a cat belongs right here!`,
         ],
         involvedCells: [
           { row: sol.row, col: sol.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
@@ -1445,7 +1423,6 @@ export function generateHint(
         steps: [
           `A cat is already placed at ${cellName(blocker.row, blocker.col)}.`,
           `Rules state cats cannot share the same row, column, territory, or touch (${relation}).`,
-          `Conclusion: Mark ${cellName(cell.row, cell.col)} with an ❌.`,
         ],
         involvedCells: [
           { row: cell.row, col: cell.col, fadedState: 'mark', highlight: true, reason: 'forced_empty' },
@@ -1472,7 +1449,6 @@ export function generateHint(
           steps: [
             `Inspect Row ${r + 1}: all other squares are marked with ❌ or blocked by existing rules.`,
             `Every row must contain exactly one cat.`,
-            `Conclusion: Place a cat at ${cellName(target.row, target.col)}!`,
           ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
@@ -1506,7 +1482,6 @@ export function generateHint(
           steps: [
             `Inspect Column ${c + 1}: all other squares are marked with ❌ or blocked by existing rules.`,
             `Every column must contain exactly one cat.`,
-            `Conclusion: Place a cat at ${cellName(target.row, target.col)}!`,
           ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
@@ -1540,7 +1515,6 @@ export function generateHint(
           steps: [
             `Inspect ${formatTerritoryTag(reg, theme)}: all other squares are marked with ❌ or blocked by existing rules.`,
             `Every colored territory must contain exactly one cat.`,
-            `Conclusion: Place a cat at ${cellName(target.row, target.col)}!`,
           ],
           involvedCells: [
             { row: target.row, col: target.col, fadedState: 'cat', highlight: true, reason: 'caused_by' },
