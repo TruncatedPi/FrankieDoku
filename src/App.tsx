@@ -113,6 +113,7 @@ export function App() {
         levelNumber={currentLevel?.levelNumber}
         levelName={currentLevel?.name}
         isHardLevel={gameMode === 'campaign' && currentLevel ? Boolean(getLevelDifficultyInfo(currentLevel.id)?.isHard) : false}
+        isSuperHardLevel={gameMode === 'campaign' && currentLevel ? Boolean(getLevelDifficultyInfo(currentLevel.id)?.isSuperHard) : false}
         gridSize={currentPuzzle.size}
         hearts={hearts}
         maxHearts={maxHearts}

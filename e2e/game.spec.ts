@@ -385,3 +385,40 @@ test('gold hint frame and translucent preview remain distinct with white divider
   await page.emulateMedia({reducedMotion:'reduce'});
   await expect(frame).toHaveCSS('animation-iteration-count','1');
 });
+
+test('header badge displays HARD for hard campaign levels and adapts SUPER-HARD to SUPER when tight', async ({ page, browser }) => {
+  const hardLevel = CAMPAIGN_LEVELS.find(l => l.id === 'level-15')!;
+  const superHardLevel = CAMPAIGN_LEVELS.find(l => l.id === 'level-497')!;
+
+  // Regular hard level shows HARD on desktop
+  await page.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(hardLevel, 'campaign'));
+  await page.goto('./');
+  const hardBadge = page.getByTestId('header-hard-badge');
+  await expect(hardBadge).toBeVisible();
+  await expect(hardBadge).toHaveText('HARD');
+
+  // Fresh page for super-hard level (avoids pagehide flush or init script reuse across reloads)
+  const superPage = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  try {
+    await superPage.addInitScript(game => localStorage.setItem('meowdoku_saved_session_v2', JSON.stringify(game)), newGame(superHardLevel, 'campaign'));
+    await superPage.goto('./');
+    const badge = superPage.getByTestId('header-hard-badge');
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveText('SUPER-HARD');
+
+    // Narrow iPhone viewport: lacks room for full SUPER-HARD alongside truncated title, hearts, and timer
+    await superPage.setViewportSize({ width: 390, height: 844 });
+    await expect(badge).toHaveText('SUPER');
+    expect(await superPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    const badgeBox = (await badge.boundingBox())!;
+    const livesBox = (await superPage.locator('[title$="lives remaining"]').boundingBox())!;
+    expect(badgeBox.x + badgeBox.width).toBeLessThan(livesBox.x);
+
+    // Widening back restores SUPER-HARD
+    await superPage.setViewportSize({ width: 1280, height: 720 });
+    await expect(badge).toHaveText('SUPER-HARD');
+  } finally {
+    await superPage.close();
+  }
+});

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HintWindow } from './HintWindow';
 import { GameMode, PlayStyle, CatBreed, HintResult, ThemePalette } from '../engine/types';
 import { getTerritoryInfo } from '../engine/palettes';
@@ -12,6 +12,7 @@ interface HeaderProps {
   levelNumber?: number;
   levelName?: string;
   isHardLevel?: boolean;
+  isSuperHardLevel?: boolean;
   gridSize: number;
   hearts: number;
   maxHearts: number;
@@ -75,6 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
   levelNumber,
   levelName,
   isHardLevel = false,
+  isSuperHardLevel = false,
   gridSize,
   hearts,
   maxHearts,
@@ -95,6 +97,59 @@ export const Header: React.FC<HeaderProps> = ({
   onDismissHint,
 }) => {
   const [explanationHint, setExplanationHint] = useState<HintResult | null>(null);
+  const statusRowRef = useRef<HTMLDivElement | null>(null);
+  const modeTitleRef = useRef<HTMLSpanElement | null>(null);
+  const [compactSuperBadge, setCompactSuperBadge] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 480 : false
+  );
+
+  useEffect(() => {
+    if (!(gameMode === 'campaign' && isSuperHardLevel)) {
+      setCompactSuperBadge(false);
+      return;
+    }
+
+    let cancelled = false;
+    const measureRoom = () => {
+      if (cancelled) return;
+      const rowEl = statusRowRef.current;
+      const titleEl = modeTitleRef.current;
+      if (!rowEl || !titleEl) return;
+
+      const style = window.getComputedStyle(rowEl);
+      const padLeft = parseFloat(style.paddingLeft) || 0;
+      const padRight = parseFloat(style.paddingRight) || 0;
+      const rowInnerWidth = rowEl.clientWidth - padLeft - padRight;
+
+      let otherChildrenWidth = 0;
+      for (let i = 1; i < rowEl.children.length; i++) {
+        otherChildrenWidth += (rowEl.children[i] as HTMLElement).getBoundingClientRect().width;
+      }
+
+      const rowGaps = Math.max(0, rowEl.children.length - 1) * (parseFloat(style.columnGap) || 8);
+      const reservedTitleWidth = Math.min(titleEl.scrollWidth, 160);
+      const availableForBadgeBox = rowInnerWidth - otherChildrenWidth - rowGaps - reservedTitleWidth - 6;
+      setCompactSuperBadge(availableForBadgeBox < 82);
+    };
+
+    measureRoom();
+
+    const observer =
+      typeof ResizeObserver !== 'undefined' && statusRowRef.current
+        ? new ResizeObserver(measureRoom)
+        : null;
+    if (observer && statusRowRef.current) {
+      observer.observe(statusRowRef.current);
+    }
+    window.addEventListener('resize', measureRoom);
+    document.fonts?.ready?.then(measureRoom).catch(() => {});
+
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+      window.removeEventListener('resize', measureRoom);
+    };
+  }, [gameMode, isSuperHardLevel, playStyle, levelNumber, levelName]);
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const rem = secs % 60;
@@ -253,19 +308,27 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Info Status Row: Level Title, Hearts / Zen, Timer */}
-          <div className="flex items-center justify-between px-2 py-1.5 rounded-2xl bg-white/70 dark:bg-cozy-darkCard/70 backdrop-blur-sm border border-slate-200/40 dark:border-white/5 shadow-sm text-sm">
+          <div ref={statusRowRef} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-2xl bg-white/70 dark:bg-cozy-darkCard/70 backdrop-blur-sm border border-slate-200/40 dark:border-white/5 shadow-sm text-sm">
             {/* Mode & Level name */}
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-bold text-slate-800 dark:text-slate-100 truncate max-w-[160px]">
+              <span ref={modeTitleRef} className="font-bold text-slate-800 dark:text-slate-100 truncate max-w-[160px]">
                 {getModeTitle()}
               </span>
-              {gameMode === 'campaign' && isHardLevel && (
+              {gameMode === 'campaign' && (isHardLevel || isSuperHardLevel) && (
                 <span
                   data-testid="header-hard-badge"
-                  title="Significantly above average difficulty for this map size in the current campaign"
-                  className="shrink-0 px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300/60 dark:border-rose-700/50 text-[9px] font-extrabold tracking-wider uppercase leading-none"
+                  title={
+                    isSuperHardLevel
+                      ? 'Super-hard: significantly above average difficulty with multi-step lookahead for this map size'
+                      : 'Significantly above average difficulty for this map size in the current campaign'
+                  }
+                  className={`shrink-0 px-1.5 py-0.5 rounded border text-[9px] font-extrabold tracking-wider uppercase leading-none ${
+                    isSuperHardLevel
+                      ? 'bg-rose-700 dark:bg-rose-600 text-white border-rose-800/60 dark:border-rose-400/60 shadow-sm'
+                      : 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300/60 dark:border-rose-700/50'
+                  }`}
                 >
-                  HARD
+                  {isSuperHardLevel ? (compactSuperBadge ? 'SUPER' : 'SUPER-HARD') : 'HARD'}
                 </span>
               )}
             </div>
